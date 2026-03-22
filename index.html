@@ -492,7 +492,7 @@
     .mapping-meta { min-width: 0; flex: 1; }
     .mapping-meta strong { display: block; line-height: 1.35; color: #f8fafc; word-break: break-word; }
     .mapping-meta span { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; }
-    .sample-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; width: 88px; flex-shrink: 0; }
+    .sample-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; width: 134px; flex-shrink: 0; }
     .field-card { padding: 14px; background: rgba(255, 255, 255, 0.035); }
     .field-value { margin-top: 10px; font-size: 1rem; line-height: 1.5; word-break: break-word; }
     .mode-chip { margin-right: 8px; margin-bottom: 8px; font-size: 11px; }
@@ -862,6 +862,34 @@
       color: var(--muted);
       white-space: nowrap;
     }
+    .delete-btn {
+      position: relative;
+      min-width: 40px;
+      width: 40px;
+      padding: 10px;
+    }
+    .delete-btn::before,
+    .delete-btn::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .delete-btn::before {
+      top: 12px;
+      width: 12px;
+      height: 14px;
+      border: 2px solid #fca5a5;
+      border-top: none;
+      border-radius: 0 0 3px 3px;
+    }
+    .delete-btn::after {
+      top: 9px;
+      width: 16px;
+      height: 2px;
+      background: #fca5a5;
+      box-shadow: 0 -3px 0 -0.5px #fca5a5;
+    }
     @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
 
     @media (max-width: 1360px) {
@@ -1171,6 +1199,7 @@
     const SESSION_DB_NAME = 'midi-mapper-studio-db';
     const SESSION_DB_VERSION = 1;
     const SESSION_SAMPLE_STORE = 'sessionSamples';
+    const STOP_FADE_SECONDS = 0.018;
 
     const state = {
       audioContext: null,
@@ -2180,6 +2209,7 @@
           </div>
           <div class="sample-actions">
             <button class="icon-btn secondary" data-assign="${sample.id}" title="Assign to selected target">Assign</button>
+            <button class="icon-btn ghost delete-btn" data-delete-sample="${sample.id}" title="Delete sample" aria-label="Delete sample"></button>
           </div>
         `;
         row.addEventListener('dragstart', (event) => {
@@ -2195,6 +2225,10 @@
           clearDropHighlights();
         });
         row.querySelector('[data-assign]').addEventListener('click', () => assignSampleToSelected(sample.id));
+        row.querySelector('[data-delete-sample]').addEventListener('click', (event) => {
+          event.stopPropagation();
+          deleteSample(sample.id);
+        });
         const previewToggle = row.querySelector('[data-preview-toggle]');
         previewToggle.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -2238,6 +2272,34 @@
         return;
       }
       assignSampleToTarget(state.selectedTarget, sampleId);
+    }
+
+    function deleteSample(sampleId) {
+      const sample = getSampleById(sampleId);
+      if (!sample) return;
+
+      if (state.preview.sampleId === sampleId) destroyPreviewAudio();
+
+      Object.entries(state.mappings).forEach(([noteKey, mappedSampleId]) => {
+        if (mappedSampleId !== sampleId) return;
+        const note = Number(noteKey);
+        stopNotePlayback(note);
+        delete state.mappings[note];
+        delete state.playbackModes[note];
+      });
+
+      state.samples = state.samples.filter((item) => item.id !== sampleId);
+      state.sampleBuffers.delete(sampleId);
+      state.sampleFiles.delete(sampleId);
+
+      renderSamples();
+      renderLaunchpadGrid();
+      renderKeyboardGrid();
+      renderKeyboardPiano();
+      updateInspector();
+      renderDashboardStats();
+      scheduleSessionSave(true);
+      log(`Deleted ${sampleDisplayLabel(sample)} from the sample library.`);
     }
 
     function togglePlaybackMode(note) {
@@ -2451,6 +2513,7 @@
       gainNode.connect(state.masterGain);
       return {
         source,
+        gainNode,
         startOffset: playbackMeta.startOffset,
         playDuration: playbackMeta.playDuration,
       };
@@ -2460,9 +2523,20 @@
       const active = state.activeNotes.get(note);
       if (!active) return;
       stopProgressTracking(note);
-      try { active.source.stop(); } catch (error) {}
       state.activeNotes.delete(note);
       clearProgress(note);
+      if (active.stopTimer) clearTimeout(active.stopTimer);
+      const now = state.audioContext?.currentTime || 0;
+      if (active.gainNode) {
+        const gain = active.gainNode.gain;
+        const currentGain = Math.max(0.0001, gain.value || 0.0001);
+        gain.cancelScheduledValues(now);
+        gain.setValueAtTime(currentGain, now);
+        gain.exponentialRampToValueAtTime(0.0001, now + STOP_FADE_SECONDS);
+      }
+      active.stopTimer = setTimeout(() => {
+        try { active.source.stop(); } catch (error) {}
+      }, Math.max(20, STOP_FADE_SECONDS * 1000 + 8));
       updateInspector();
       renderDashboardStats();
     }
@@ -2524,7 +2598,7 @@
 
         const playback = createPlaybackSource(sampleId, velocity, true);
         if (!playback) return;
-        const { source, startOffset, playDuration } = playback;
+        const { source, gainNode, startOffset, playDuration } = playback;
         maybeStartArmedRecording();
         source.onended = () => {
           const current = state.activeNotes.get(note);
@@ -2537,7 +2611,7 @@
           }
         };
 
-        state.activeNotes.set(note, { source, intervalId: null, timeoutId: null, loop: true, mode: 'latch' });
+        state.activeNotes.set(note, { source, gainNode, intervalId: null, timeoutId: null, stopTimer: null, loop: true, mode: 'latch' });
         source.start(0, startOffset);
         startProgressTracking(note, Math.max(0.1, playDuration), true);
         flashVisual(note);
@@ -2551,7 +2625,7 @@
 
         const playback = createPlaybackSource(sampleId, velocity, true);
         if (!playback) return;
-        const { source, startOffset, playDuration } = playback;
+        const { source, gainNode, startOffset, playDuration } = playback;
         maybeStartArmedRecording();
         source.onended = () => {
           const current = state.activeNotes.get(note);
@@ -2564,7 +2638,7 @@
           }
         };
 
-        state.activeNotes.set(note, { source, intervalId: null, timeoutId: null, loop: true, mode });
+        state.activeNotes.set(note, { source, gainNode, intervalId: null, timeoutId: null, stopTimer: null, loop: true, mode });
         source.start(0, startOffset);
         startProgressTracking(note, Math.max(0.1, playDuration), true);
         flashVisual(note);
@@ -2579,7 +2653,7 @@
 
       const playback = createPlaybackSource(sampleId, velocity, false);
       if (!playback) return;
-      const { source, startOffset, playDuration } = playback;
+      const { source, gainNode, startOffset, playDuration } = playback;
       source.onended = () => {
         const current = state.activeNotes.get(note);
         if (current && current.source === source) {
@@ -2591,7 +2665,7 @@
         }
       };
 
-      state.activeNotes.set(note, { source, intervalId: null, timeoutId: null, loop: false, mode });
+      state.activeNotes.set(note, { source, gainNode, intervalId: null, timeoutId: null, stopTimer: null, loop: false, mode });
       source.start(0, startOffset);
       startProgressTracking(note, Math.max(0.1, playDuration), false);
       flashVisual(note);
