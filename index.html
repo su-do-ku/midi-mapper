@@ -2546,6 +2546,33 @@
         return;
       }
 
+      if (mode === 'hold') {
+        if (existing) stopNotePlayback(note);
+
+        const playback = createPlaybackSource(sampleId, velocity, true);
+        if (!playback) return;
+        const { source, startOffset, playDuration } = playback;
+        maybeStartArmedRecording();
+        source.onended = () => {
+          const current = state.activeNotes.get(note);
+          if (current && current.source === source) {
+            stopProgressTracking(note);
+            state.activeNotes.delete(note);
+            clearProgress(note);
+            updateInspector();
+            renderDashboardStats();
+          }
+        };
+
+        state.activeNotes.set(note, { source, intervalId: null, timeoutId: null, loop: true, mode });
+        source.start(0, startOffset);
+        startProgressTracking(note, Math.max(0.1, playDuration), true);
+        flashVisual(note);
+        updateInspector();
+        renderDashboardStats();
+        return;
+      }
+
       if (existing) stopNotePlayback(note);
 
       maybeStartArmedRecording();
