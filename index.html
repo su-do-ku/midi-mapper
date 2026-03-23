@@ -892,6 +892,38 @@
     }
     @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
 
+    @media (max-width: 1720px) {
+      body { overflow: auto; }
+      .app-shell {
+        width: min(1720px, calc(100vw - 16px));
+        height: auto;
+        padding: 14px;
+      }
+      .topbar,
+      .transport-dock,
+      .transport-main { grid-template-columns: 1fr; }
+      .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace {
+        grid-template-columns: 280px minmax(0, 1fr) 340px;
+        gap: 12px;
+      }
+      .control-panel {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .inspector-panel {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .performance-panel {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+      }
+      .library-panel {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+      }
+    }
     @media (max-width: 1360px) {
       .topbar,
       .transport-dock,
@@ -1208,7 +1240,9 @@
       recordTapSink: null,
       midiAccess: null,
       midiInput: null,
+      midiOutput: null,
       midiConnected: false,
+      midiSysexEnabled: false,
       mode: 'launchpad',
       keyboardView: 'notes',
       launchpadGridSize: 8,
@@ -1541,7 +1575,7 @@
     }
 
     function targetLabel(note) {
-      return state.mode === 'launchpad' ? `Pad ${note}` : `${noteToName(note)} (${note})`;
+      return state.mode === 'launchpad' ? String(note) : `${noteToName(note)} (${note})`;
     }
 
     function renderBrowserStatus() {
@@ -1590,6 +1624,50 @@
       if (!sampleId) return '';
       const sample = state.samples.find((item) => item.id === sampleId);
       return sample ? sampleDisplayLabel(sample) : '';
+    }
+
+    function findMatchingMidiOutput(input) {
+      if (!state.midiAccess || !input) return null;
+      const outputs = Array.from(state.midiAccess.outputs.values());
+      if (!outputs.length) return null;
+      return outputs.find((output) =>
+        (output.name || '') === (input.name || '') &&
+        (output.manufacturer || '') === (input.manufacturer || '')
+      ) || outputs.find((output) =>
+        (output.name || '').includes(input.name || '') ||
+        (input.name || '').includes(output.name || '')
+      ) || null;
+    }
+
+    function switchLaunchpadProgrammerMode(enabled) {
+      if (!state.midiOutput || !state.midiSysexEnabled) return;
+      state.midiOutput.send([240, 0, 32, 41, 2, 13, 14, enabled ? 1 : 0, 247]);
+    }
+
+    function launchpadLightStyle(note) {
+      if (state.emergencyStopNote === note) {
+        return { status: 144, color: 5 };
+      }
+      if (!state.mappings[note]) return null;
+      const mode = sampleModeForNote(note);
+      if (mode === 'hold') return { status: 146, color: 45 };
+      if (mode === 'latch') return { status: 145, color: 19 };
+      return { status: 144, color: 19 };
+    }
+
+    function renderLaunchpadHardwareLights() {
+      if (!state.midiOutput) return;
+      state.launchpadNotes8x8.forEach((note) => {
+        const light = launchpadLightStyle(note);
+        if (!light) {
+          state.midiOutput.send([144, note, 0]);
+          return;
+        }
+        state.midiOutput.send([144, note, 0]);
+        state.midiOutput.send([145, note, 0]);
+        state.midiOutput.send([146, note, 0]);
+        state.midiOutput.send([light.status, note, light.color]);
+      });
     }
 
     function sampleDisplayLabel(sampleOrId) {
@@ -1785,11 +1863,11 @@
             <span class="pad-led"></span>
           </div>
           <span class="sample-chip" style="background: rgba(251, 113, 133, 0.16); color: #ffe4e6;">Panic trigger</span>
-          <span class="pad-subtitle">Pad ${note}</span>
+          <span class="pad-subtitle">${note}</span>
           ${progressMarkup(note)}
         ` : `
           <div class="pad-top">
-            <span class="pad-title">Pad ${note}</span>
+            <span class="pad-title">${note}</span>
             <span class="pad-led"></span>
           </div>
           <span class="sample-chip">${escapeHtml(mappedSampleName(note) || 'No sample assigned')}</span>
@@ -1801,6 +1879,7 @@
       });
       updateSelectionVisuals();
       els.launchpadGridBadge.textContent = `Grid: ${state.launchpadGridSize} x ${state.launchpadGridSize}`;
+      renderLaunchpadHardwareLights();
     }
 
     function renderKeyboardGrid() {
@@ -1964,27 +2043,40 @@
       if (!supportsMidi()) {
         state.midiConnected = false;
         state.midiInput = null;
+        state.midiOutput = null;
         renderMidiConnectionState();
         log('This browser does not support Web MIDI. Use a Chromium-based browser over HTTPS or localhost.');
         return;
       }
       if (!state.midiAccess) {
         try {
-          state.midiAccess = await navigator.requestMIDIAccess();
+          state.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+          state.midiSysexEnabled = true;
           state.midiAccess.onstatechange = () => refreshMidiDevices();
-        } catch (error) {
-          state.midiConnected = false;
-          state.midiInput = null;
-          renderMidiConnectionState();
-          log(`MIDI access failed: ${error.message}`);
-          return;
+        } catch (sysexError) {
+          try {
+            state.midiAccess = await navigator.requestMIDIAccess();
+            state.midiSysexEnabled = false;
+            state.midiAccess.onstatechange = () => refreshMidiDevices();
+          } catch (error) {
+            state.midiConnected = false;
+            state.midiInput = null;
+            state.midiOutput = null;
+            renderMidiConnectionState();
+            log(`MIDI access failed: ${error.message}`);
+            return;
+          }
         }
       }
       const inputs = Array.from(state.midiAccess.inputs.values());
+      const outputs = Array.from(state.midiAccess.outputs.values());
+      const outputStillAvailable = state.midiOutput && outputs.some((output) => output.id === state.midiOutput.id);
+      if (!outputStillAvailable) state.midiOutput = null;
       els.midiInputSelect.innerHTML = '';
       if (!inputs.length) {
         if (state.midiInput) state.midiInput.onmidimessage = null;
         state.midiInput = null;
+        state.midiOutput = null;
         state.midiConnected = false;
         const opt = document.createElement('option');
         opt.value = '';
@@ -1999,6 +2091,7 @@
       if (!currentInputStillAvailable && state.midiInput) {
         state.midiInput.onmidimessage = null;
         state.midiInput = null;
+        state.midiOutput = null;
         state.midiConnected = false;
       }
 
@@ -2028,10 +2121,15 @@
       }
       if (state.midiInput) state.midiInput.onmidimessage = null;
       state.midiInput = input;
+      state.midiOutput = findMatchingMidiOutput(input);
       state.midiConnected = true;
       state.midiInput.onmidimessage = handleMidiMessage;
+      if (state.midiOutput) {
+        switchLaunchpadProgrammerMode(true);
+        renderLaunchpadHardwareLights();
+      }
       renderMidiConnectionState();
-      log(`Connected to ${input.name || 'MIDI device'}. Press a pad or key to test.`);
+      log(`Connected to ${input.name || 'MIDI device'}${state.midiOutput ? ' with Launchpad pad lighting enabled.' : '.'}`);
     }
     async function decodeAndStoreSample(file, preferredId = null, preferredLabel = '', preferredStartOffset = 0, preferredNormalize = true) {
       ensureAudioContext();
@@ -3126,8 +3224,10 @@
       els.modeSelect.addEventListener('change', renderMode);
       els.midiInputSelect.addEventListener('change', () => {
         if (state.midiInput && state.midiInput.id !== els.midiInputSelect.value) {
+          switchLaunchpadProgrammerMode(false);
           state.midiInput.onmidimessage = null;
           state.midiInput = null;
+          state.midiOutput = null;
           state.midiConnected = false;
           log('Selected MIDI input changed. Click Connect MIDI to use it.');
         }
@@ -3197,6 +3297,7 @@
         if (state.mode === 'keyboard' && state.keyboardView === 'piano') renderKeyboardPiano();
       });
       window.addEventListener('beforeunload', () => {
+        switchLaunchpadProgrammerMode(false);
         persistSessionMetadata();
         destroyPreviewAudio();
         revokeLatestRecording();
