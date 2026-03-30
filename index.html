@@ -45,6 +45,34 @@
       padding: 24px;
     }
 
+    .drop-overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(12, 17, 23, 0.76);
+      border: 2px dashed rgba(123, 198, 172, 0.75);
+      color: #ebfff6;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+      z-index: 9999;
+    }
+
+    .drop-overlay.visible {
+      opacity: 1;
+    }
+
+    .drop-overlay span {
+      padding: 18px 24px;
+      background: rgba(20, 28, 37, 0.92);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
     .hero {
       display: grid;
       gap: 20px;
@@ -396,6 +424,21 @@
       height: 5px;
       border-radius: 999px;
       background: rgba(255,255,255,0.12);
+    }
+
+    .pad-progress {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 10px;
+      height: 5px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.96), rgba(121, 240, 196, 0.9));
+      transform-origin: left center;
+      transform: scaleX(var(--pad-progress, 0));
+      transition: transform 80ms linear;
+      z-index: 1;
+      pointer-events: none;
     }
 
     .pad.active {
@@ -1149,6 +1192,9 @@
   </style>
 </head>
 <body>
+  <div id="dropOverlay" class="drop-overlay" aria-hidden="true">
+    <span>Drop Audio Files To Import Samples</span>
+  </div>
   <main class="app-shell">
     <header class="app-topbar">
       <div class="app-topbar__product">
@@ -1279,7 +1325,8 @@
               <label for="modeSelect">Playback mode</label>
               <select id="modeSelect">
                 <option value="oneshot">One-shot</option>
-                <option value="hold">Hold while pressed</option>
+                <option value="play">Play / Stop</option>
+                <option value="hold" selected>Hold while pressed</option>
                 <option value="latch">Latch loop</option>
                 <option value="loopcapture">Loop Capture</option>
               </select>
@@ -1293,7 +1340,7 @@
             <div class="field">
               <label for="offsetRangeInput">Start offset</label>
               <div class="offset-row">
-                <input id="offsetRangeInput" type="range" min="0" max="100" step="1" value="0">
+                <input id="offsetRangeInput" type="range" min="0" max="10000" step="10" value="0">
               </div>
               <div class="field-hint" id="offsetHint">0 ms</div>
             </div>
@@ -1402,7 +1449,8 @@
     const NOTE_TO_PAD = new Map();
     const ACTIVE_PAD_COLOR = [0, 127, 0];
     const DEFAULT_COLOR = "#4de0a8";
-    const STOP_FADE_SECONDS = 0.018;
+    const STOP_FADE_SECONDS = 0.03;
+    const RELEASE_REVERB_TAIL_SECONDS = 0.24;
     const PAD_MAP_STORAGE_KEY = "launchpad-mini-mk3-pad-maps-v1";
     const PANIC_PAD_STORAGE_KEY = "launchpad-mini-mk3-panic-pad-v1";
     const DB_NAME = "launchpad-mini-mk3-samples";
@@ -1431,6 +1479,9 @@
       audioContext: null,
       audioUnlocked: false,
       masterGain: null,
+      reverbSendGain: null,
+      reverbConvolver: null,
+      reverbWetGain: null,
       recordTapNode: null,
       recordTapSink: null,
       midiAccess: null,
@@ -1451,6 +1502,8 @@
       previewAudio: null,
       previewSampleId: null,
       sampleLibraryPage: 0,
+      playbackProgressTimer: null,
+      padProgressCache: new Map(),
       recorder: {
         armed: false,
         isRecording: false,
@@ -1468,6 +1521,7 @@
       },
       textScroller: null,
       spriteScreensaver: null,
+      dragDepth: 0,
     };
 
     const elements = {
@@ -1518,6 +1572,7 @@
       spriteScreensaverHint: document.getElementById("spriteScreensaverHint"),
       startSpriteScreensaverButton: document.getElementById("startSpriteScreensaverButton"),
       stopSpriteScreensaverButton: document.getElementById("stopSpriteScreensaverButton"),
+      dropOverlay: document.getElementById("dropOverlay"),
     };
 
     init().catch((error) => {
@@ -1592,6 +1647,7 @@
       elements.samplePrevPageButton.addEventListener("click", () => changeSampleLibraryPage(-1));
       elements.sampleNextPageButton.addEventListener("click", () => changeSampleLibraryPage(1));
       bindSidebarAccordion();
+      bindWindowSampleDrop();
       elements.offsetRangeInput.addEventListener("input", syncOffsetInputs);
       elements.sampleSelect.addEventListener("change", () => {
         updateOffsetHint();
@@ -1610,6 +1666,7 @@
       elements.clearPadButton.addEventListener("click", clearSelectedPadMapping);
 
       window.addEventListener("beforeunload", () => {
+        stopPlaybackProgressLoop();
         if (state.spriteScreensaver) {
           state.spriteScreensaver.stop(false);
         }
@@ -1645,6 +1702,69 @@
           }
         });
       }
+    }
+
+    function bindWindowSampleDrop() {
+      window.addEventListener("dragenter", handleWindowDragEnter);
+      window.addEventListener("dragover", handleWindowDragOver);
+      window.addEventListener("dragleave", handleWindowDragLeave);
+      window.addEventListener("drop", handleWindowDrop);
+    }
+
+    function isAudioFileDrag(event) {
+      const items = Array.from(event.dataTransfer?.items || []);
+      if (!items.length) {
+        return false;
+      }
+      return items.some((item) => item.kind === "file" && (!item.type || item.type.startsWith("audio/")));
+    }
+
+    function setDropOverlayVisible(visible) {
+      elements.dropOverlay.classList.toggle("visible", visible);
+      elements.dropOverlay.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+
+    function resetWindowDropState() {
+      state.dragDepth = 0;
+      setDropOverlayVisible(false);
+    }
+
+    function handleWindowDragEnter(event) {
+      if (!isAudioFileDrag(event)) {
+        return;
+      }
+      event.preventDefault();
+      state.dragDepth += 1;
+      setDropOverlayVisible(true);
+    }
+
+    function handleWindowDragOver(event) {
+      if (!isAudioFileDrag(event)) {
+        return;
+      }
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+      setDropOverlayVisible(true);
+    }
+
+    function handleWindowDragLeave(event) {
+      if (!isAudioFileDrag(event)) {
+        return;
+      }
+      event.preventDefault();
+      state.dragDepth = Math.max(0, state.dragDepth - 1);
+      if (!state.dragDepth || event.target === document.documentElement || event.target === document.body) {
+        resetWindowDropState();
+      }
+    }
+
+    async function handleWindowDrop(event) {
+      event.preventDefault();
+      const files = Array.from(event.dataTransfer?.files || []).filter((file) => !file.type || file.type.startsWith("audio/"));
+      resetWindowDropState();
+      await importSampleFiles(files);
     }
 
     function startMarqueeScroll() {
@@ -1726,7 +1846,10 @@
       for (const sample of state.samples) {
         sample.volumePercent = clampSampleVolumePercent(sample.volumePercent ?? 100);
       }
-      state.samples.sort((a, b) => a.name.localeCompare(b.name));
+      state.samples.sort((a, b) => {
+        const addedDelta = (b.addedAt || 0) - (a.addedAt || 0);
+        return addedDelta || a.name.localeCompare(b.name);
+      });
       pruneMissingSampleMappings();
       updateSampleSelect();
     }
@@ -1766,8 +1889,7 @@
       });
     }
 
-    async function handleSampleImport(event) {
-      const files = Array.from(event.target.files || []);
+    async function importSampleFiles(files) {
       if (!files.length) {
         return;
       }
@@ -1788,9 +1910,16 @@
 
       event.target.value = "";
       await loadSamplesFromDb();
+      state.sampleLibraryPage = 0;
       renderLibrary();
       updateCounts();
       setStatus(elements.storageStatus, `Imported ${files.length} sample${files.length === 1 ? "" : "s"} into IndexedDB.`);
+    }
+
+    async function handleSampleImport(event) {
+      const files = Array.from(event.target.files || []);
+      event.target.value = "";
+      await importSampleFiles(files);
     }
 
     async function handleConfigImport(event) {
@@ -1891,6 +2020,7 @@
         button.className = "pad unmapped";
         button.dataset.note = String(note);
         button.innerHTML = `
+          <div class="pad-progress"></div>
           <div class="pad-label">
             <strong></strong>
             <span>Empty</span>
@@ -1936,10 +2066,13 @@
         const label = button.querySelector(".pad-label span");
         const color = mapping?.color || "#203245";
         const active = state.activePads.has(note);
+        const playing = Boolean(activePlayback) && mapping?.mode === "play";
+        const progress = getPadPlaybackProgress(activePlayback);
         button.classList.toggle("selected", state.selectedPad === note);
         button.classList.toggle("unmapped", !mapping?.sampleId);
         button.classList.toggle("active", active);
-        button.style.setProperty("--pad-color", active ? "#14d948" : color);
+        button.style.setProperty("--pad-color", (active || playing) ? "#14d948" : color);
+        button.style.setProperty("--pad-progress", String(progress));
         button.title = mapping?.sampleId
           ? `${describePad(note)} ${modeLabel(mapping.mode)}. ${sampleNameSuffix(mapping.sampleId).replace(/^ · /, "")}`
           : describePad(note);
@@ -2099,14 +2232,15 @@
     function syncInspectorFromSelectedPad() {
       const note = state.selectedPad;
       const mapping = getPadMapping(note);
+      const sample = state.samples.find((entry) => entry.id === mapping?.sampleId);
       elements.selectedPadTitle.textContent = `Pad ${note} selected · page ${formatViewportLabel()}`;
       elements.selectedPadInfo.textContent = describePadDetail(note, mapping);
       elements.panicPadHint.textContent = "The far-right utility key CC19 is fixed as Stop / Solo / Mute.";
       elements.sampleSelect.value = mapping?.sampleId || "";
-      elements.modeSelect.value = mapping?.mode || "oneshot";
+      elements.modeSelect.value = mapping?.mode || "hold";
       elements.colorInput.value = mapping?.color || DEFAULT_COLOR;
-      const offsetPercent = clampOffsetPercent(mapping?.offsetPercent ?? 0);
-      elements.offsetRangeInput.value = String(offsetPercent);
+      const offsetMs = getMappingOffsetMs(mapping, sample?.durationSec || 0);
+      elements.offsetRangeInput.value = String(offsetMs);
       elements.savePadButton.disabled = false;
       elements.previewPadButton.disabled = false;
       elements.clearPadButton.disabled = false;
@@ -2115,6 +2249,15 @@
       elements.colorInput.disabled = false;
       elements.offsetRangeInput.disabled = false;
       updateOffsetHint();
+      if (mapping?.offsetMs == null && mapping?.offsetPercent != null && mapping?.sampleId && !sample?.durationSec) {
+        primeSampleDuration(mapping.sampleId).then(() => {
+          if (state.selectedPad === note) {
+            syncInspectorFromSelectedPad();
+          }
+        }).catch(() => {
+          // Ignore metadata load failures in inspector sync.
+        });
+      }
     }
 
     function saveSelectedPadMapping() {
@@ -2134,7 +2277,7 @@
         sampleId,
         mode: elements.modeSelect.value,
         color: elements.colorInput.value,
-        offsetPercent: clampOffsetPercent(elements.offsetRangeInput.value),
+        offsetMs: clampOffsetMs(elements.offsetRangeInput.value),
         loopStartSec: existing?.loopStartSec ?? null,
         loopEndSec: existing?.loopEndSec ?? null,
       });
@@ -2147,17 +2290,17 @@
 
     function assignSampleToSelectedPad(sampleId) {
       const existing = getPadMapping(state.selectedPad) || {
-        mode: elements.modeSelect.value || "oneshot",
+        mode: elements.modeSelect.value || "hold",
         color: elements.colorInput.value || DEFAULT_COLOR,
-        offsetPercent: clampOffsetPercent(elements.offsetRangeInput.value),
+        offsetMs: clampOffsetMs(elements.offsetRangeInput.value),
       };
 
       setPadMapping(state.selectedPad, {
         ...existing,
         sampleId,
-        mode: existing.mode || "oneshot",
+        mode: existing.mode || "hold",
         color: existing.color || DEFAULT_COLOR,
-        offsetPercent: clampOffsetPercent(existing.offsetPercent ?? elements.offsetRangeInput.value),
+        offsetMs: clampOffsetMs(existing.offsetMs ?? elements.offsetRangeInput.value),
         loopStartSec: existing.loopStartSec ?? null,
         loopEndSec: existing.loopEndSec ?? null,
       });
@@ -2405,6 +2548,15 @@
         state.audioContext = new AudioContext();
         state.masterGain = state.audioContext.createGain();
         state.masterGain.gain.value = 0.96;
+        state.reverbSendGain = state.audioContext.createGain();
+        state.reverbSendGain.gain.value = 0.42;
+        state.reverbConvolver = state.audioContext.createConvolver();
+        state.reverbConvolver.buffer = buildTinyReverbImpulse(state.audioContext);
+        state.reverbWetGain = state.audioContext.createGain();
+        state.reverbWetGain.gain.value = 0.42;
+        state.reverbSendGain.connect(state.reverbConvolver);
+        state.reverbConvolver.connect(state.reverbWetGain);
+        state.reverbWetGain.connect(state.masterGain);
         state.masterGain.connect(state.audioContext.destination);
         setupRecordingTap();
       }
@@ -2493,6 +2645,19 @@
         return;
       }
 
+      if (mapping.mode === "play") {
+        if (state.audioByPad.has(note)) {
+          stopPadPlayback(note);
+          state.activePads.delete(note);
+          renderPadGrid();
+          refreshSinglePadLed(note);
+          return;
+        }
+        maybeStartArmedRecording();
+        await startPadPlayback(note, { loop: false, sustain: true });
+        return;
+      }
+
       if (mapping.mode === "oneshot") {
         if (state.audioByPad.has(note)) {
           stopPadPlayback(note);
@@ -2510,12 +2675,18 @@
       if (mapping?.mode === "loopcapture") {
         return;
       }
+      if (mapping?.mode === "play" && state.audioByPad.has(note)) {
+        state.activePads.delete(note);
+        renderPadGrid();
+        refreshSinglePadLed(note);
+        return;
+      }
       if (mapping?.mode === "oneshot" && state.audioByPad.has(note)) {
         renderPadGrid();
         refreshSinglePadLed(note);
         return;
       }
-      if (mapping?.mode !== "latch") {
+      if (mapping?.mode !== "latch" && mapping?.mode !== "play") {
         state.activePads.delete(note);
       }
       renderPadGrid();
@@ -2529,22 +2700,55 @@
         return;
       }
       const audio = createAudioInstance(mapping.sampleId, { loop: options.loop });
+      const offsetMs = await resolvePlaybackOffsetMs(mapping);
+      const entry = {
+        kind: "audio",
+        audio,
+        mapping,
+        sustain: options.sustain,
+        status: "starting",
+        offsetMs,
+      };
 
       audio.addEventListener("ended", () => {
         const current = state.audioByPad.get(note);
-        if (current?.audio === audio) {
-          state.audioByPad.delete(note);
-          cleanupAudioInstance(audio);
-          if (mapping.mode !== "latch") {
-            state.activePads.delete(note);
-          }
-          renderPadGrid();
-          refreshSinglePadLed(note);
+        if (current === entry) {
+          finalizeAudioPadPlayback(note, entry);
+        }
+      });
+      audio.addEventListener("error", () => {
+        if (state.audioByPad.get(note) === entry) {
+          finalizeAudioPadPlayback(note, entry);
         }
       });
 
-      await playAudioInstance(audio, mapping.offsetPercent ?? 0);
-      state.audioByPad.set(note, { audio, mapping, sustain: options.sustain });
+      state.audioByPad.set(note, entry);
+      syncPlaybackProgressLoop();
+      renderPadGrid();
+      refreshSinglePadLed(note);
+
+      try {
+        await playAudioInstance(audio, offsetMs);
+        if (state.audioByPad.get(note) !== entry) {
+          cleanupAudioInstance(audio);
+          return;
+        }
+        entry.status = "playing";
+      } catch (error) {
+        if (state.audioByPad.get(note) === entry) {
+          state.audioByPad.delete(note);
+          cleanupAudioInstance(audio);
+          if (mapping.mode !== "latch" && mapping.mode !== "play") {
+            state.activePads.delete(note);
+          }
+          syncPlaybackProgressLoop();
+          renderPadGrid();
+          refreshSinglePadLed(note);
+        }
+        throw error;
+      }
+
+      syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
     }
@@ -2556,16 +2760,24 @@
       const endSec = Math.max(startSec + 0.01, Math.min(buffer.duration, mapping.loopEndSec ?? buffer.duration));
       const shouldLoop = Boolean(options.loop);
       const source = state.audioContext.createBufferSource();
-      const gainNode = state.audioContext.createGain();
-      gainNode.gain.value = sampleVolumeGain(sample?.volumePercent ?? 100);
+      const dryGainNode = state.audioContext.createGain();
+      const sendGainNode = state.audioContext.createGain();
+      const volumeGain = sampleVolumeGain(sample?.volumePercent ?? 100);
+      dryGainNode.gain.value = volumeGain;
+      sendGainNode.gain.value = volumeGain * 0.8;
       source.buffer = buffer;
-      source.connect(gainNode);
-      gainNode.connect(state.masterGain);
+      source.connect(dryGainNode);
+      source.connect(sendGainNode);
+      dryGainNode.connect(state.masterGain);
+      if (state.reverbSendGain) {
+        sendGainNode.connect(state.reverbSendGain);
+      }
 
       const entry = {
         kind: "buffer",
         source,
-        gainNode,
+        dryGainNode,
+        sendGainNode,
         buffer,
         mapping,
         phase: "loopingSaved",
@@ -2585,10 +2797,11 @@
           return;
         }
         state.audioByPad.delete(note);
-        if (mapping.mode !== "latch") {
+        if (mapping.mode !== "latch" && mapping.mode !== "play") {
           state.activePads.delete(note);
         }
         cleanupBufferEntry(entry);
+        syncPlaybackProgressLoop();
         renderPadGrid();
         refreshSinglePadLed(note);
       };
@@ -2604,6 +2817,7 @@
       }
 
       state.audioByPad.set(note, entry);
+      syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
     }
@@ -2623,7 +2837,7 @@
       }
 
       if (existing.kind !== "buffer") {
-        stopPadPlayback(note);
+        stopPadPlayback(note, { immediate: true });
         maybeStartArmedRecording();
         await startLoopCapturePlayback(note, { phase: "awaitA" });
         setStatus(elements.storageStatus, `Loop Capture for pad ${note} restarted. Press again to set A.`);
@@ -2706,8 +2920,7 @@
       const mapping = getPadMapping(note);
       const buffer = await getDecodedSampleBuffer(mapping.sampleId);
       const sample = state.samples.find((entry) => entry.id === mapping.sampleId);
-      const offsetPercent = clampOffsetPercent(mapping.offsetPercent ?? 0);
-      const startOffsetSec = percentToSeconds(offsetPercent, buffer.duration);
+      const startOffsetSec = offsetMsToSeconds(getMappingOffsetMs(mapping, buffer.duration), buffer.duration);
       const phase = options.phase || "awaitA";
       const loopStartSec = options.loopStartSec ?? mapping.loopStartSec ?? startOffsetSec;
       const loopEndSec = options.loopEndSec ?? mapping.loopEndSec ?? buffer.duration;
@@ -2715,20 +2928,29 @@
       const draftLoopEndSec = options.draftLoopEndSec ?? null;
 
       if (options.restart) {
-        stopPadPlayback(note);
+        stopPadPlayback(note, { immediate: true });
       }
 
       const source = state.audioContext.createBufferSource();
-      const gainNode = state.audioContext.createGain();
-      gainNode.gain.value = sampleVolumeGain(sample?.volumePercent ?? 100);
+      const dryGainNode = state.audioContext.createGain();
+      const sendGainNode = state.audioContext.createGain();
+      const volumeGain = sampleVolumeGain(sample?.volumePercent ?? 100);
+      dryGainNode.gain.value = volumeGain;
+      // Keep capture playback dry so A/B restarts do not leave a reverb tail behind.
+      sendGainNode.gain.value = 0;
       source.buffer = buffer;
-      source.connect(gainNode);
-      gainNode.connect(state.masterGain);
+      source.connect(dryGainNode);
+      dryGainNode.connect(state.masterGain);
+      if (state.reverbSendGain && sendGainNode.gain.value > 0) {
+        source.connect(sendGainNode);
+        sendGainNode.connect(state.reverbSendGain);
+      }
 
       const entry = {
         kind: "buffer",
         source,
-        gainNode,
+        dryGainNode,
+        sendGainNode,
         buffer,
         mapping,
         phase,
@@ -2749,6 +2971,7 @@
         state.audioByPad.delete(note);
         state.activePads.delete(note);
         cleanupBufferEntry(entry);
+        syncPlaybackProgressLoop();
         renderPadGrid();
         refreshSinglePadLed(note);
       };
@@ -2770,18 +2993,32 @@
       }
 
       state.audioByPad.set(note, entry);
+      syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
     }
 
-    function stopPadPlayback(note) {
+    function stopPadPlayback(note, options = {}) {
       const current = state.audioByPad.get(note);
       if (!current) {
         return;
       }
 
       if (current.kind === "buffer") {
-        stopBufferPlayback(note, current);
+        stopBufferPlayback(note, current, options);
+        return;
+      }
+
+      if (options.immediate) {
+        try {
+          current.audio.pause();
+          current.audio.currentTime = 0;
+        } catch {
+          // Ignore immediate stop errors.
+        }
+        cleanupAudioInstance(current.audio);
+        state.audioByPad.delete(note);
+        syncPlaybackProgressLoop();
         return;
       }
 
@@ -2795,14 +3032,22 @@
         cleanupAudioInstance(current.audio);
       };
 
-      if (state.audioContext && current.audio._gainNode) {
+      if (state.audioContext && (current.audio._dryGainNode || current.audio._sendGainNode)) {
         try {
-          const gain = current.audio._gainNode.gain;
           const now = state.audioContext.currentTime;
-          gain.cancelScheduledValues(now);
-          gain.setValueAtTime(Math.max(0.0001, gain.value || 1), now);
-          gain.exponentialRampToValueAtTime(0.0001, now + STOP_FADE_SECONDS);
-          setTimeout(finishStop, Math.max(20, STOP_FADE_SECONDS * 1000 + 8));
+          if (current.audio._dryGainNode) {
+            const dryGain = current.audio._dryGainNode.gain;
+            dryGain.cancelScheduledValues(now);
+            dryGain.setValueAtTime(Math.max(0.0001, dryGain.value || 1), now);
+            dryGain.exponentialRampToValueAtTime(0.0001, now + STOP_FADE_SECONDS);
+          }
+          if (current.audio._sendGainNode) {
+            const sendGain = current.audio._sendGainNode.gain;
+            sendGain.cancelScheduledValues(now);
+            sendGain.setValueAtTime(Math.max(0.0001, sendGain.value || 1), now);
+            sendGain.exponentialRampToValueAtTime(0.0001, now + RELEASE_REVERB_TAIL_SECONDS);
+          }
+          setTimeout(finishStop, Math.max(40, RELEASE_REVERB_TAIL_SECONDS * 1000 + 20));
         } catch {
           finishStop();
         }
@@ -2810,9 +3055,22 @@
         finishStop();
       }
       state.audioByPad.delete(note);
+      syncPlaybackProgressLoop();
     }
 
-    function stopBufferPlayback(note, entry) {
+    function stopBufferPlayback(note, entry, options = {}) {
+      if (options.immediate) {
+        try {
+          entry.source.onended = null;
+          entry.source.stop();
+        } catch {
+          // Ignore repeated stops.
+        }
+        cleanupBufferEntry(entry);
+        state.audioByPad.delete(note);
+        syncPlaybackProgressLoop();
+        return;
+      }
       const finishStop = () => {
         try {
           entry.source.onended = null;
@@ -2823,14 +3081,22 @@
         cleanupBufferEntry(entry);
       };
 
-      if (state.audioContext && entry.gainNode) {
+      if (state.audioContext && (entry.dryGainNode || entry.sendGainNode)) {
         try {
-          const gain = entry.gainNode.gain;
           const now = state.audioContext.currentTime;
-          gain.cancelScheduledValues(now);
-          gain.setValueAtTime(Math.max(0.0001, gain.value || 1), now);
-          gain.exponentialRampToValueAtTime(0.0001, now + STOP_FADE_SECONDS);
-          setTimeout(finishStop, Math.max(20, STOP_FADE_SECONDS * 1000 + 8));
+          if (entry.dryGainNode) {
+            const dryGain = entry.dryGainNode.gain;
+            dryGain.cancelScheduledValues(now);
+            dryGain.setValueAtTime(Math.max(0.0001, dryGain.value || 1), now);
+            dryGain.exponentialRampToValueAtTime(0.0001, now + STOP_FADE_SECONDS);
+          }
+          if (entry.sendGainNode) {
+            const sendGain = entry.sendGainNode.gain;
+            sendGain.cancelScheduledValues(now);
+            sendGain.setValueAtTime(Math.max(0.0001, sendGain.value || 1), now);
+            sendGain.exponentialRampToValueAtTime(0.0001, now + RELEASE_REVERB_TAIL_SECONDS);
+          }
+          setTimeout(finishStop, Math.max(40, RELEASE_REVERB_TAIL_SECONDS * 1000 + 20));
         } catch {
           finishStop();
         }
@@ -2838,6 +3104,7 @@
         finishStop();
       }
       state.audioByPad.delete(note);
+      syncPlaybackProgressLoop();
     }
 
     function stopPadsUsingSample(sampleId) {
@@ -2854,6 +3121,7 @@
         stopPadPlayback(note);
       }
       state.activePads.clear();
+      syncPlaybackProgressLoop();
       renderPadGrid();
       renderLibrary();
     }
@@ -2871,12 +3139,20 @@
       audio._objectUrl = objectUrl;
       if (state.audioContext && state.masterGain) {
         const source = state.audioContext.createMediaElementSource(audio);
-        const gainNode = state.audioContext.createGain();
-        gainNode.gain.value = sampleVolumeGain(sample.volumePercent ?? 100);
-        source.connect(gainNode);
-        gainNode.connect(state.masterGain);
+        const dryGainNode = state.audioContext.createGain();
+        const sendGainNode = state.audioContext.createGain();
+        const volumeGain = sampleVolumeGain(sample.volumePercent ?? 100);
+        dryGainNode.gain.value = volumeGain;
+        sendGainNode.gain.value = volumeGain * 0.8;
+        source.connect(dryGainNode);
+        source.connect(sendGainNode);
+        dryGainNode.connect(state.masterGain);
+        if (state.reverbSendGain) {
+          sendGainNode.connect(state.reverbSendGain);
+        }
         audio._sourceNode = source;
-        audio._gainNode = gainNode;
+        audio._dryGainNode = dryGainNode;
+        audio._sendGainNode = sendGainNode;
       }
       return audio;
     }
@@ -2885,13 +3161,21 @@
       if (!audio) {
         return;
       }
-      if (audio._gainNode) {
+      if (audio._dryGainNode) {
         try {
-          audio._gainNode.disconnect();
+          audio._dryGainNode.disconnect();
         } catch {
           // Ignore disconnect errors from already-cleaned gains.
         }
-        audio._gainNode = null;
+        audio._dryGainNode = null;
+      }
+      if (audio._sendGainNode) {
+        try {
+          audio._sendGainNode.disconnect();
+        } catch {
+          // Ignore disconnect errors from already-cleaned send gains.
+        }
+        audio._sendGainNode = null;
       }
       if (audio._sourceNode) {
         try {
@@ -2922,15 +3206,20 @@
         // Ignore disconnect errors.
       }
       try {
-        entry.gainNode.disconnect();
+        entry.dryGainNode?.disconnect();
+      } catch {
+        // Ignore disconnect errors.
+      }
+      try {
+        entry.sendGainNode?.disconnect();
       } catch {
         // Ignore disconnect errors.
       }
     }
 
-    async function playAudioInstance(audio, offsetPercent = 0) {
+    async function playAudioInstance(audio, offsetMs = 0) {
       try {
-        await setAudioStartOffset(audio, offsetPercent);
+        await setAudioStartOffset(audio, offsetMs);
         await audio.play();
         setStatus(elements.audioStatus, "Audio engine ready.");
       } catch (error) {
@@ -2971,9 +3260,9 @@
       return Math.max(0, Math.min(entry.buffer.duration, seconds));
     }
 
-    async function setAudioStartOffset(audio, offsetPercent) {
-      const percent = clampOffsetPercent(offsetPercent);
-      if (!percent) {
+    async function setAudioStartOffset(audio, offsetMs) {
+      const ms = clampOffsetMs(offsetMs);
+      if (!ms) {
         audio.currentTime = 0;
         return;
       }
@@ -2995,7 +3284,7 @@
         return;
       }
 
-      const targetTime = Math.min(duration * (percent / 100), Math.max(0, duration - 0.01));
+      const targetTime = Math.min(ms / 1000, Math.max(0, duration - 0.01));
       audio.currentTime = targetTime;
     }
 
@@ -3018,6 +3307,25 @@
       }
       const blob = new Blob([bytes], { type: sample?.type || "audio/wav" });
       return URL.createObjectURL(blob);
+    }
+
+    function buildTinyReverbImpulse(audioContext) {
+      const durationSec = 0.42;
+      const decay = 8;
+      const sampleRate = audioContext.sampleRate;
+      const length = Math.max(1, Math.floor(sampleRate * durationSec));
+      const impulse = audioContext.createBuffer(2, length, sampleRate);
+
+      for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+        const data = impulse.getChannelData(channel);
+        for (let index = 0; index < length; index += 1) {
+          const t = index / length;
+          const envelope = Math.pow(1 - t, decay);
+          data[index] = (Math.random() * 2 - 1) * envelope * 0.42;
+        }
+      }
+
+      return impulse;
     }
 
     function pruneMissingSampleMappings() {
@@ -3137,11 +3445,138 @@
       const mapping = getPadMapping(note);
       const active = state.activePads.has(note);
       if (active) {
-        return ACTIVE_PAD_COLOR;
+        const playback = state.audioByPad.get(note);
+        const progress = getPadPlaybackProgress(playback);
+        const scale = 1 - (progress * 0.75);
+        return ACTIVE_PAD_COLOR.map((value) => Math.max(1, Math.round(value * scale)));
+      }
+      const playback = state.audioByPad.get(note);
+      if (playback && mapping?.mode === "play") {
+        const progress = getPadPlaybackProgress(playback);
+        const scale = 1 - (progress * 0.75);
+        return ACTIVE_PAD_COLOR.map((value) => Math.max(1, Math.round(value * scale)));
       }
       const color = mapping?.color || "#112030";
       const rgb = hexToRgb(color);
       return [rgbToMidi(rgb.r), rgbToMidi(rgb.g), rgbToMidi(rgb.b)];
+    }
+
+    function finalizeAudioPadPlayback(note, entry) {
+      if (state.audioByPad.get(note) !== entry) {
+        return;
+      }
+      state.audioByPad.delete(note);
+      cleanupAudioInstance(entry.audio);
+      if (entry.mapping.mode !== "latch" && entry.mapping.mode !== "play") {
+        state.activePads.delete(note);
+      }
+      syncPlaybackProgressLoop();
+      renderPadGrid();
+      refreshSinglePadLed(note);
+    }
+
+    function getPadPlaybackProgress(entry) {
+      if (!entry) {
+        return 0;
+      }
+      if (entry.kind === "audio") {
+        return getAudioPlaybackProgress(entry);
+      }
+      return getBufferPlaybackProgress(entry);
+    }
+
+    function getAudioPlaybackProgress(entry) {
+      const audio = entry?.audio;
+      if (!audio || entry.status === "starting") {
+        return 0;
+      }
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      if (!duration) {
+        return 0;
+      }
+      const offsetSec = Math.max(0, (entry.offsetMs || 0) / 1000);
+      if (audio.loop) {
+        return Math.max(0, Math.min(1, audio.currentTime / duration));
+      }
+      const span = Math.max(0.01, duration - offsetSec);
+      const elapsed = Math.max(0, audio.currentTime - offsetSec);
+      return Math.max(0, Math.min(1, elapsed / span));
+    }
+
+    function getBufferPlaybackProgress(entry) {
+      if (!entry?.buffer) {
+        return 0;
+      }
+      if ((entry.phase === "loopingDraft" || entry.phase === "loopingSaved") && entry.loopStartSec != null && entry.loopEndSec != null) {
+        const loopLength = Math.max(0.01, entry.loopEndSec - entry.loopStartSec);
+        const elapsed = Math.max(0, state.audioContext.currentTime - (entry.loopAnchorTime ?? entry.startedAt));
+        return Math.max(0, Math.min(1, (elapsed % loopLength) / loopLength));
+      }
+      const currentSec = getBufferPlaybackSeconds(entry);
+      const spanStart = entry.startOffsetSec || 0;
+      const spanEnd = entry.loopEndSec ?? entry.buffer.duration;
+      const span = Math.max(0.01, spanEnd - spanStart);
+      return Math.max(0, Math.min(1, (currentSec - spanStart) / span));
+    }
+
+    function syncPlaybackProgressLoop() {
+      if (state.audioByPad.size) {
+        startPlaybackProgressLoop();
+      } else {
+        stopPlaybackProgressLoop();
+      }
+    }
+
+    function startPlaybackProgressLoop() {
+      if (state.playbackProgressTimer) {
+        return;
+      }
+      state.playbackProgressTimer = setInterval(updatePlaybackProgressUi, 80);
+    }
+
+    function stopPlaybackProgressLoop() {
+      if (state.playbackProgressTimer) {
+        clearInterval(state.playbackProgressTimer);
+      }
+      state.playbackProgressTimer = null;
+      state.padProgressCache.clear();
+    }
+
+    function updatePlaybackProgressUi() {
+      let shouldRender = false;
+      const touchedNotes = [];
+
+      for (const [note, entry] of state.audioByPad.entries()) {
+        if (entry.kind === "audio" && entry.status !== "starting") {
+          if (entry.audio.ended || (!entry.audio.loop && entry.audio.paused && entry.audio.currentTime > 0.01)) {
+            finalizeAudioPadPlayback(note, entry);
+            continue;
+          }
+        }
+        const nextValue = Math.round(getPadPlaybackProgress(entry) * 20) / 20;
+        if (state.padProgressCache.get(note) !== nextValue) {
+          state.padProgressCache.set(note, nextValue);
+          touchedNotes.push(note);
+          shouldRender = true;
+        }
+      }
+
+      for (const note of Array.from(state.padProgressCache.keys())) {
+        if (!state.audioByPad.has(note)) {
+          state.padProgressCache.delete(note);
+          touchedNotes.push(note);
+          shouldRender = true;
+        }
+      }
+
+      if (!shouldRender) {
+        return;
+      }
+
+      renderPadGrid();
+      for (const note of new Set(touchedNotes)) {
+        refreshSinglePadLed(note);
+      }
     }
 
     function setStatus(element, text) {
@@ -3184,6 +3619,8 @@
 
     function modeLabel(mode) {
       switch (mode) {
+        case "play":
+          return "Play";
         case "hold":
           return "Hold";
         case "latch":
@@ -3514,6 +3951,7 @@
         state.panicPad = getFixedPanicPadKey();
         persistPadMappings();
         await loadSamplesFromDb();
+        state.sampleLibraryPage = 0;
         state.padViewport = { x: 0, y: 0 };
         state.selectedPad = PAD_NOTES.includes(config.selectedPad) ? config.selectedPad : PADS[0].id;
         syncInspectorFromSelectedPad();
@@ -3533,17 +3971,17 @@
     }
 
     function syncOffsetInputs() {
-      const normalized = clampOffsetPercent(elements.offsetRangeInput.value);
+      const normalized = clampOffsetMs(elements.offsetRangeInput.value);
       elements.offsetRangeInput.value = String(normalized);
       updateOffsetHint();
     }
 
-    function clampOffsetPercent(value) {
+    function clampOffsetMs(value) {
       const parsed = Number.parseFloat(value);
       if (!Number.isFinite(parsed)) {
         return 0;
       }
-      return Math.max(0, Math.min(100, Math.round(parsed)));
+      return Math.max(0, Math.min(10000, Math.round(parsed)));
     }
 
     function clampSampleVolumePercent(value) {
@@ -3575,27 +4013,11 @@
     }
 
     function updateOffsetHint() {
-      const percent = clampOffsetPercent(elements.offsetRangeInput.value);
+      const offsetMs = clampOffsetMs(elements.offsetRangeInput.value);
       const sampleId = elements.sampleSelect.value;
-      const sample = state.samples.find((entry) => entry.id === sampleId);
-      const durationSec = sample?.durationSec || 0;
-      if (!durationSec) {
-        elements.offsetHint.textContent = `${percent}%`;
-        if (sampleId) {
-          primeSampleDuration(sampleId).then(() => {
-            if (elements.sampleSelect.value === sampleId) {
-              updateOffsetHint();
-            }
-          }).catch(() => {
-            // Ignore metadata load failures in the hint.
-          });
-        }
-        return;
-      }
-      const ms = Math.round(durationSec * (percent / 100) * 1000);
-      elements.offsetHint.textContent = ms >= 1000
-        ? `${(ms / 1000).toFixed(2)} s`
-        : `${ms} ms`;
+      elements.offsetHint.textContent = offsetMs >= 1000
+        ? `${(offsetMs / 1000).toFixed(2)} s`
+        : `${offsetMs} ms`;
     }
 
     async function primeSampleDuration(sampleId) {
@@ -3629,15 +4051,43 @@
       return duration;
     }
 
-    function percentToSeconds(percent, duration) {
-      return Math.max(0, Math.min(duration, duration * (clampOffsetPercent(percent) / 100)));
+    function getMappingOffsetMs(mapping, durationSec = 0) {
+      if (mapping?.offsetMs != null) {
+        return clampOffsetMs(mapping.offsetMs);
+      }
+      if (mapping?.offsetPercent != null) {
+        if (durationSec > 0) {
+          return clampOffsetMs(durationSec * (clampLegacyOffsetPercent(mapping.offsetPercent) / 100) * 1000);
+        }
+        return clampOffsetMs(mapping.offsetPercent);
+      }
+      return 0;
     }
 
-    function secondsToPercent(seconds, duration) {
-      if (!duration) {
+    async function resolvePlaybackOffsetMs(mapping) {
+      if (!mapping) {
         return 0;
       }
-      return clampOffsetPercent((Math.max(0, Math.min(duration, seconds)) / duration) * 100);
+      if (mapping.offsetMs != null) {
+        return clampOffsetMs(mapping.offsetMs);
+      }
+      if (mapping.offsetPercent != null) {
+        const durationSec = await primeSampleDuration(mapping.sampleId).catch(() => 0);
+        return getMappingOffsetMs(mapping, durationSec);
+      }
+      return 0;
+    }
+
+    function clampLegacyOffsetPercent(value) {
+      const parsed = Number.parseFloat(value);
+      if (!Number.isFinite(parsed)) {
+        return 0;
+      }
+      return Math.max(0, Math.min(100, Math.round(parsed)));
+    }
+
+    function offsetMsToSeconds(offsetMs, duration) {
+      return Math.max(0, Math.min(duration, clampOffsetMs(offsetMs) / 1000));
     }
 
     function formatLoopSeconds(seconds) {
