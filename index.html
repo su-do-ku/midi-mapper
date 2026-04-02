@@ -21,7 +21,7 @@
       --radius: 22px;
       --pad-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 28px rgba(0,0,0,0.28);
       --pad-size: clamp(52px, min(6.8vw, 8.2vh), 78px);
-      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      font-family: "Trebuchet MS", "Segoe UI", "Helvetica Neue", sans-serif;
     }
 
     * {
@@ -173,7 +173,7 @@
 
     button {
       border: 0;
-      border-radius: 0;
+      border-radius: 10px;
       padding: 12px 16px;
       font-weight: 600;
       cursor: pointer;
@@ -251,7 +251,7 @@
     input[type="search"],
     input[type="number"] {
       width: 100%;
-      border-radius: 0;
+      border-radius: 10px;
       border: 1px solid var(--line);
       background: rgba(242, 248, 255, 0.96);
       color: #102238;
@@ -296,7 +296,7 @@
     input[type="color"] {
       width: 100%;
       height: 54px;
-      border-radius: 0;
+      border-radius: 10px;
       border: 1px solid var(--line);
       background: transparent;
       padding: 6px;
@@ -415,6 +415,13 @@
       user-select: none;
       position: relative;
       overflow: hidden;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+    }
+
+    .pad:hover {
+      transform: scale(1.08);
+      z-index: 3;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 24px 36px rgba(0,0,0,0.34);
     }
 
     .pad::after {
@@ -451,6 +458,17 @@
       outline-offset: 2px;
     }
 
+    .pad.drag-source {
+      outline: 3px dashed rgba(255,255,255,0.8);
+      outline-offset: 2px;
+    }
+
+    .pad.drag-target {
+      outline: 3px solid rgba(123, 198, 172, 0.95);
+      outline-offset: 3px;
+      filter: brightness(1.12);
+    }
+
     .pad.unmapped {
       background:
         linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 28%),
@@ -467,11 +485,14 @@
     .pad-label strong {
       font-size: 1rem;
       letter-spacing: 0.02em;
+      color: var(--pad-label-color, rgba(255,255,255,0.92));
+      text-shadow: var(--pad-label-shadow, 0 1px 0 rgba(0,0,0,0.22));
     }
 
     .pad-label span {
       font-size: 0.76rem;
-      color: rgba(255,255,255,0.78);
+      color: var(--pad-label-muted, rgba(255,255,255,0.78));
+      text-shadow: var(--pad-label-shadow, 0 1px 0 rgba(0,0,0,0.22));
     }
 
     .pad-summary {
@@ -549,6 +570,18 @@
       flex: 1;
     }
 
+    .editor-shell.left-collapsed {
+      grid-template-columns: 54px 1fr 320px;
+    }
+
+    .editor-shell.right-collapsed {
+      grid-template-columns: 390px 1fr 54px;
+    }
+
+    .editor-shell.left-collapsed.right-collapsed {
+      grid-template-columns: 54px 1fr 54px;
+    }
+
     .editor-sidebar {
       background: linear-gradient(180deg, #2b313b, #262c35);
       border-right: 1px solid rgba(255,255,255,0.06);
@@ -560,6 +593,43 @@
     .editor-sidebar--right {
       border-right: 0;
       border-left: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .editor-sidebar.is-collapsed {
+      padding: 10px 6px 16px;
+    }
+
+    .editor-sidebar.is-collapsed .sidebar-toolbar,
+    .editor-sidebar.is-collapsed .sidebar-section {
+      display: none;
+    }
+
+    .sidebar-collapse-rail {
+      display: none;
+      height: 100%;
+      align-content: start;
+    }
+
+    .editor-sidebar.is-collapsed .sidebar-collapse-rail {
+      display: grid;
+    }
+
+    .sidebar-collapse-button {
+      width: 100%;
+      min-height: 120px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.04);
+      color: #d8dce5;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 6px;
+    }
+
+    .sidebar-toggle {
+      min-width: 40px;
+      padding: 0 12px;
     }
 
     .sidebar-toolbar {
@@ -574,6 +644,7 @@
       align-items: center;
       justify-content: center;
       height: 40px;
+      border-radius: 10px;
       border: 1px solid rgba(232, 236, 244, 0.72);
       color: #dce0e8;
       background: rgba(255,255,255,0.02);
@@ -591,7 +662,7 @@
       background: rgba(255,255,255,0.02);
       color: #dce0e8;
       border: 1px solid rgba(232, 236, 244, 0.24);
-      border-radius: 0;
+      border-radius: 10px;
       padding: 0;
       font-size: 1rem;
     }
@@ -665,7 +736,7 @@
       color: #d8dce5;
       border: 1px solid rgba(255,255,255,0.08);
       padding: 8px 12px;
-      border-radius: 0;
+      border-radius: 10px;
       font-weight: 600;
       line-height: 1;
     }
@@ -841,6 +912,32 @@
       padding: 6px 4px;
       place-items: center;
       display: grid;
+    }
+
+    .launchpad__button--bank {
+      color: #aeb6c3;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+
+    .launchpad__button--bank:hover {
+      transform: scale(1.04);
+      filter: brightness(1.08);
+    }
+
+    .launchpad__button--bank.is-active {
+      color: #e9fff5;
+      border-color: rgba(121, 240, 196, 0.7);
+      box-shadow: inset 0 0 0 1px rgba(121, 240, 196, 0.28), 0 12px 20px rgba(0,0,0,0.26);
+    }
+
+    .launchpad__button--bank.is-playing:not(.is-active) {
+      color: #ffe0ad;
+      border-color: rgba(255, 182, 81, 0.52);
+      box-shadow: inset 0 0 0 1px rgba(255, 182, 81, 0.18);
     }
 
     .launchpad__button-arrow-pointer {
@@ -1212,14 +1309,21 @@
       </div>
     </header>
 
-    <div class="editor-shell">
-      <aside class="editor-sidebar editor-sidebar--left">
+    <div class="editor-shell" id="editorShell">
+      <aside class="editor-sidebar editor-sidebar--left" id="leftSidebar">
+        <div class="sidebar-collapse-rail">
+          <button class="sidebar-collapse-button" id="expandLeftSidebarButton" type="button">Show Library</button>
+        </div>
         <div class="sidebar-toolbar">
           <label class="sidebar-upload">
             <input id="sampleFileInput" type="file" accept="audio/*" multiple>
             <span>+ Add Samples</span>
           </label>
           <button class="sidebar-icon-button" id="refreshLedsButton" type="button" title="Refresh LEDs">◎</button>
+        </div>
+
+        <div class="button-row" style="margin-bottom: 18px;">
+          <button class="danger" id="clearSamplesButton" type="button">Clear Samples</button>
         </div>
 
         <section class="sidebar-section">
@@ -1241,6 +1345,7 @@
       <section class="editor-main">
         <div class="editor-toolbar">
           <div class="editor-toolbar__left">
+            <button class="toolbar-button sidebar-toggle" id="toggleLeftSidebarButton" type="button" title="Toggle sample library">☰</button>
             <button class="toolbar-button" type="button" aria-hidden="true">↶</button>
             <button class="toolbar-button" type="button" aria-hidden="true">↷</button>
             <div class="toolbar-title">Factory Custom Mode 3</div>
@@ -1254,6 +1359,7 @@
             <button class="toolbar-action" id="saveConfigButton" type="button">Export Config</button>
             <button class="toolbar-action" id="clearAllButton" type="button">Clear All</button>
             <button class="toolbar-action" id="panicButton" type="button">Stop All</button>
+            <button class="toolbar-button sidebar-toggle" id="toggleRightSidebarButton" type="button" title="Toggle pad tools">☰</button>
             <input id="configFileInput" type="file" accept="application/zip,.zip" hidden>
           </div>
         </div>
@@ -1288,14 +1394,14 @@
                   <div class="launchpad__grid-pads pad-grid" id="padGrid"></div>
                 </div>
 
-                <div class="launchpad__buttons-side" aria-hidden="true">
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
-                  <div class="launchpad__button"></div>
+                <div class="launchpad__buttons-side">
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="1" type="button">1</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="2" type="button">2</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="3" type="button">3</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="4" type="button">4</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="5" type="button">5</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="6" type="button">6</button>
+                  <button class="launchpad__button launchpad__button--bank" data-bank-button="7" type="button">7</button>
                   <div class="launchpad__button launchpad__button--transport">Stop<br>Solo<br>Mute</div>
                 </div>
               </div>
@@ -1305,7 +1411,10 @@
         </div>
       </section>
 
-      <aside class="editor-sidebar editor-sidebar--right">
+      <aside class="editor-sidebar editor-sidebar--right" id="rightSidebar">
+        <div class="sidebar-collapse-rail">
+          <button class="sidebar-collapse-button" id="expandRightSidebarButton" type="button">Show Tools</button>
+        </div>
         <details class="sidebar-section sidebar-accordion" data-accordion-item open>
           <summary>Pad Inspector</summary>
           <div class="sidebar-accordion__body">
@@ -1407,6 +1516,17 @@
             </div>
           </div>
         </details>
+
+        <section class="sidebar-section">
+          <h2>Global Audio</h2>
+          <div class="field">
+            <label for="releaseReverbInput">Stop room effect</label>
+            <div class="offset-row">
+              <input id="releaseReverbInput" type="range" min="0" max="100" step="1" value="60">
+            </div>
+            <div class="field-hint" id="releaseReverbHint">60%</div>
+          </div>
+        </section>
       </aside>
     </div>
     <footer class="status-bar">
@@ -1419,14 +1539,15 @@
 
   <script src="./launchpad-sprite-screensaver.js"></script>
   <script src="./launchpad-text-scroller.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="./vendor/lame.min.js"></script>
+  <script src="./vendor/jszip.min.js"></script>
   <script>
     const USER_MODE_LAYOUT_SYSEX = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x00, 0x06, 0xF7];
     const LIVE_MODE_SYSEX = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x00, 0xF7];
     const SYSEX_PREFIX = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x03];
     const USER_BUTTON_CC = 98;
     const FIXED_PANIC_CC = 19;
+    const BANK_BUTTON_CCS = [89, 79, 69, 59, 49, 39, 29];
     const NAV_BUTTON_CC = {
       up: 91,
       down: 92,
@@ -1451,8 +1572,12 @@
     const DEFAULT_COLOR = "#4de0a8";
     const STOP_FADE_SECONDS = 0.03;
     const RELEASE_REVERB_TAIL_SECONDS = 0.24;
+    const BASE_REVERB_SEND_MULTIPLIER = 0.18;
+    const STOP_REVERB_SEND_MULTIPLIER = 1.55;
+    const LOOP_CAPTURE_HOLD_MS = 250;
     const PAD_MAP_STORAGE_KEY = "launchpad-mini-mk3-pad-maps-v1";
     const PANIC_PAD_STORAGE_KEY = "launchpad-mini-mk3-panic-pad-v1";
+    const RELEASE_REVERB_STORAGE_KEY = "launchpad-mini-mk3-release-room-v1";
     const DB_NAME = "launchpad-mini-mk3-samples";
     const DB_VERSION = 1;
     const STORE_NAME = "samples";
@@ -1494,14 +1619,21 @@
       decodedBuffers: new Map(),
       selectedPad: PADS[0].id,
       padViewport: { x: 0, y: 0 },
+      padBank: 0,
       panicPad: null,
       activePads: new Set(),
       audioByPad: new Map(),
       loopTapMemory: new Map(),
+      loopCaptureGestures: new Map(),
       pointerPresses: new Map(),
+      midiPresses: new Map(),
+      padDrag: null,
       previewAudio: null,
       previewSampleId: null,
       sampleLibraryPage: 0,
+      leftSidebarCollapsed: false,
+      rightSidebarCollapsed: false,
+      releaseReverbPercent: 60,
       playbackProgressTimer: null,
       padProgressCache: new Map(),
       recorder: {
@@ -1540,6 +1672,7 @@
       loadConfigButton: document.getElementById("loadConfigButton"),
       saveConfigButton: document.getElementById("saveConfigButton"),
       clearAllButton: document.getElementById("clearAllButton"),
+      clearSamplesButton: document.getElementById("clearSamplesButton"),
       configFileInput: document.getElementById("configFileInput"),
       selectedPadTitle: document.getElementById("selectedPadTitle"),
       selectedPadInfo: document.getElementById("selectedPadInfo"),
@@ -1548,6 +1681,8 @@
       colorInput: document.getElementById("colorInput"),
       offsetRangeInput: document.getElementById("offsetRangeInput"),
       offsetHint: document.getElementById("offsetHint"),
+      releaseReverbInput: document.getElementById("releaseReverbInput"),
+      releaseReverbHint: document.getElementById("releaseReverbHint"),
       panicPadHint: document.getElementById("panicPadHint"),
       savePadButton: document.getElementById("savePadButton"),
       previewPadButton: document.getElementById("previewPadButton"),
@@ -1558,6 +1693,13 @@
       samplePrevPageButton: document.getElementById("samplePrevPageButton"),
       sampleNextPageButton: document.getElementById("sampleNextPageButton"),
       samplePageInfo: document.getElementById("samplePageInfo"),
+      editorShell: document.getElementById("editorShell"),
+      leftSidebar: document.getElementById("leftSidebar"),
+      rightSidebar: document.getElementById("rightSidebar"),
+      toggleLeftSidebarButton: document.getElementById("toggleLeftSidebarButton"),
+      toggleRightSidebarButton: document.getElementById("toggleRightSidebarButton"),
+      expandLeftSidebarButton: document.getElementById("expandLeftSidebarButton"),
+      expandRightSidebarButton: document.getElementById("expandRightSidebarButton"),
       padGrid: document.getElementById("padGrid"),
       marqueeTextInput: document.getElementById("marqueeTextInput"),
       marqueeColorInput: document.getElementById("marqueeColorInput"),
@@ -1572,6 +1714,7 @@
       spriteScreensaverHint: document.getElementById("spriteScreensaverHint"),
       startSpriteScreensaverButton: document.getElementById("startSpriteScreensaverButton"),
       stopSpriteScreensaverButton: document.getElementById("stopSpriteScreensaverButton"),
+      bankButtons: Array.from(document.querySelectorAll("[data-bank-button]")),
       dropOverlay: document.getElementById("dropOverlay"),
     };
 
@@ -1582,6 +1725,7 @@
 
     async function init() {
       buildPadGrid();
+      loadReleaseReverbSetting();
       loadPadMappings();
       await initDb();
       await loadSamplesFromDb();
@@ -1592,6 +1736,7 @@
       renderRecorderUi();
       updateMarqueeSpeedHint();
       updateSpriteIntervalHint();
+      updateReleaseReverbHint();
       state.textScroller = new LaunchpadTextScroller((message) => {
         if (!state.midiOutput) {
           throw new Error("Connect the Launchpad before sending marquee text.");
@@ -1617,6 +1762,10 @@
       elements.connectButton.addEventListener("click", connectLaunchpad);
       elements.refreshLedsButton.addEventListener("click", reapplyUserMode);
       elements.armRecordButton.addEventListener("click", toggleRecordArm);
+      elements.toggleLeftSidebarButton.addEventListener("click", () => setSidebarCollapsed("left", !state.leftSidebarCollapsed));
+      elements.toggleRightSidebarButton.addEventListener("click", () => setSidebarCollapsed("right", !state.rightSidebarCollapsed));
+      elements.expandLeftSidebarButton.addEventListener("click", () => setSidebarCollapsed("left", false));
+      elements.expandRightSidebarButton.addEventListener("click", () => setSidebarCollapsed("right", false));
       elements.recordButton.addEventListener("click", () => {
         startSessionRecording(false);
       });
@@ -1627,6 +1776,7 @@
       });
       elements.saveConfigButton.addEventListener("click", exportSessionZip);
       elements.clearAllButton.addEventListener("click", clearAllData);
+      elements.clearSamplesButton.addEventListener("click", clearAllSamples);
       elements.marqueeSpeedInput.addEventListener("input", updateMarqueeSpeedHint);
       elements.marqueeDirectionSelect.addEventListener("change", updateMarqueeSpeedHint);
       elements.startMarqueeButton.addEventListener("click", startMarqueeScroll);
@@ -1648,7 +1798,10 @@
       elements.sampleNextPageButton.addEventListener("click", () => changeSampleLibraryPage(1));
       bindSidebarAccordion();
       bindWindowSampleDrop();
+      applySidebarLayout();
+      bindBankButtons();
       elements.offsetRangeInput.addEventListener("input", syncOffsetInputs);
+      elements.releaseReverbInput.addEventListener("input", handleReleaseReverbInput);
       elements.sampleSelect.addEventListener("change", () => {
         updateOffsetHint();
       });
@@ -1656,12 +1809,17 @@
       elements.previewPadButton.addEventListener("click", async () => {
         await ensureAudioReady();
         const mapping = getPadMapping(state.selectedPad);
-        if (mapping?.mode === "loopcapture" && mapping.sampleId) {
-          await playSamplePreview(mapping.sampleId);
+        if (!mapping?.sampleId) {
           return;
         }
-        await triggerPadPress(state.selectedPad, "ui");
-        setTimeout(() => triggerPadRelease(state.selectedPad, "ui"), 220);
+        if (mapping?.mode === "loopcapture" && mapping.sampleId) {
+          const offsetMs = await resolvePlaybackOffsetMs(mapping);
+          await playSamplePreview(mapping.sampleId, offsetMs);
+          return;
+        }
+        const previewLocation = getPadLocation(state.selectedPad);
+        await triggerPadPress(previewLocation, "ui");
+        setTimeout(() => triggerPadRelease(previewLocation, "ui"), 220);
       });
       elements.clearPadButton.addEventListener("click", clearSelectedPadMapping);
 
@@ -1688,6 +1846,33 @@
       elements.marqueeSpeedHint.textContent = `${speed} pad${speed === 1 ? "" : "s"} per second, ${direction}`;
     }
 
+    function loadReleaseReverbSetting() {
+      try {
+        state.releaseReverbPercent = clampReleaseReverbPercent(localStorage.getItem(RELEASE_REVERB_STORAGE_KEY));
+      } catch {
+        state.releaseReverbPercent = 60;
+      }
+      elements.releaseReverbInput.value = String(state.releaseReverbPercent);
+    }
+
+    function handleReleaseReverbInput() {
+      state.releaseReverbPercent = clampReleaseReverbPercent(elements.releaseReverbInput.value);
+      elements.releaseReverbInput.value = String(state.releaseReverbPercent);
+      localStorage.setItem(RELEASE_REVERB_STORAGE_KEY, String(state.releaseReverbPercent));
+      applyReleaseReverbSetting();
+      updateReleaseReverbHint();
+    }
+
+    function updateReleaseReverbHint() {
+      elements.releaseReverbHint.textContent = `${state.releaseReverbPercent}%`;
+    }
+
+    function applyReleaseReverbSetting() {
+      if (state.reverbWetGain) {
+        state.reverbWetGain.gain.value = 0.22 + ((state.releaseReverbPercent / 100) * 1.08);
+      }
+    }
+
     function bindSidebarAccordion() {
       const items = Array.from(document.querySelectorAll("[data-accordion-item]"));
       for (const item of items) {
@@ -1702,6 +1887,38 @@
           }
         });
       }
+    }
+
+    function bindBankButtons() {
+      for (const button of elements.bankButtons) {
+        button.addEventListener("click", () => {
+          const bank = Number.parseInt(button.dataset.bankButton || "", 10);
+          if (Number.isFinite(bank)) {
+            togglePadBank(bank, "ui");
+          }
+        });
+      }
+      renderBankButtons();
+    }
+
+    function setSidebarCollapsed(side, collapsed) {
+      if (side === "left") {
+        state.leftSidebarCollapsed = collapsed;
+      } else {
+        state.rightSidebarCollapsed = collapsed;
+      }
+      applySidebarLayout();
+    }
+
+    function applySidebarLayout() {
+      elements.editorShell.classList.toggle("left-collapsed", state.leftSidebarCollapsed);
+      elements.editorShell.classList.toggle("right-collapsed", state.rightSidebarCollapsed);
+      elements.leftSidebar.classList.toggle("is-collapsed", state.leftSidebarCollapsed);
+      elements.rightSidebar.classList.toggle("is-collapsed", state.rightSidebarCollapsed);
+      elements.toggleLeftSidebarButton.textContent = state.leftSidebarCollapsed ? "▣" : "◧";
+      elements.toggleRightSidebarButton.textContent = state.rightSidebarCollapsed ? "▣" : "◨";
+      elements.toggleLeftSidebarButton.title = state.leftSidebarCollapsed ? "Show sample library" : "Hide sample library";
+      elements.toggleRightSidebarButton.title = state.rightSidebarCollapsed ? "Show pad tools" : "Hide pad tools";
     }
 
     function bindWindowSampleDrop() {
@@ -1951,24 +2168,149 @@
       updateCounts();
     }
 
-    function getPadMappingKey(note, pageX = state.padViewport.x, pageY = state.padViewport.y) {
-      return `${pageX},${pageY}:${note}`;
+    function getPadMappingKey(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return `${pageX},${pageY},${bank}:${note}`;
     }
 
-    function getPadMapping(note, pageX = state.padViewport.x, pageY = state.padViewport.y) {
-      return state.padMappings[getPadMappingKey(note, pageX, pageY)] || null;
+    function getPadPlaybackKey(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return `${pageX},${pageY},${bank}:${note}`;
     }
 
-    function setPadMapping(note, mapping, pageX = state.padViewport.x, pageY = state.padViewport.y) {
-      state.padMappings[getPadMappingKey(note, pageX, pageY)] = mapping;
+    function getPadLocation(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return {
+        note,
+        pageX,
+        pageY,
+        bank,
+        playbackKey: getPadPlaybackKey(note, pageX, pageY, bank),
+      };
     }
 
-    function deletePadMapping(note, pageX = state.padViewport.x, pageY = state.padViewport.y) {
-      const key = getPadMappingKey(note, pageX, pageY);
+    function parsePadPlaybackKey(playbackKey) {
+      const match = String(playbackKey).match(/^(-?\d+),(-?\d+),(\d+):(\d+)$/);
+      if (!match) {
+        return null;
+      }
+      return {
+        pageX: Number.parseInt(match[1], 10),
+        pageY: Number.parseInt(match[2], 10),
+        bank: Number.parseInt(match[3], 10),
+        note: Number.parseInt(match[4], 10),
+        playbackKey,
+      };
+    }
+
+    function getPlaybackLocation(value, fallback = null) {
+      if (!value) {
+        return fallback;
+      }
+      if (typeof value === "string") {
+        return parsePadPlaybackKey(value) || fallback;
+      }
+      if (typeof value === "object" && Number.isFinite(value.note)) {
+        const pageX = Number.isFinite(value.pageX) ? value.pageX : state.padViewport.x;
+        const pageY = Number.isFinite(value.pageY) ? value.pageY : state.padViewport.y;
+        const bank = Number.isFinite(value.bank) ? value.bank : state.padBank;
+        return {
+          note: value.note,
+          pageX,
+          pageY,
+          bank,
+          playbackKey: value.playbackKey || getPadPlaybackKey(value.note, pageX, pageY, bank),
+        };
+      }
+      return fallback;
+    }
+
+    function getActivePlaybackEntry(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return state.audioByPad.get(getPadPlaybackKey(note, pageX, pageY, bank)) || null;
+    }
+
+    function isPadActive(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return state.activePads.has(getPadPlaybackKey(note, pageX, pageY, bank));
+    }
+
+    function getPadMapping(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      const keyed = state.padMappings[getPadMappingKey(note, pageX, pageY, bank)];
+      if (keyed) {
+        return keyed;
+      }
+      if (bank === 0) {
+        return state.padMappings[`${pageX},${pageY}:${note}`] || null;
+      }
+      return null;
+    }
+
+    function setPadMapping(note, mapping, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      state.padMappings[getPadMappingKey(note, pageX, pageY, bank)] = mapping;
+      if (bank === 0) {
+        delete state.padMappings[`${pageX},${pageY}:${note}`];
+      }
+    }
+
+    function deletePadMapping(note, pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      const key = getPadMappingKey(note, pageX, pageY, bank);
       delete state.padMappings[key];
+      if (bank === 0) {
+        delete state.padMappings[`${pageX},${pageY}:${note}`];
+      }
       if (state.panicPad === key) {
         state.panicPad = null;
       }
+    }
+
+    function clonePadMapping(mapping) {
+      return mapping ? { ...mapping } : null;
+    }
+
+    function swapPadMappings(
+      sourceNote,
+      targetNote,
+      sourcePageX = state.padViewport.x,
+      sourcePageY = state.padViewport.y,
+      sourceBank = state.padBank,
+      targetPageX = sourcePageX,
+      targetPageY = sourcePageY,
+      targetBank = sourceBank
+    ) {
+      if (sourceNote === targetNote && sourcePageX === targetPageX && sourcePageY === targetPageY && sourceBank === targetBank) {
+        return;
+      }
+
+      stopPadPlayback(getPadLocation(sourceNote, sourcePageX, sourcePageY, sourceBank), { immediate: true });
+      stopPadPlayback(getPadLocation(targetNote, targetPageX, targetPageY, targetBank), { immediate: true });
+      state.activePads.delete(getPadPlaybackKey(sourceNote, sourcePageX, sourcePageY, sourceBank));
+      state.activePads.delete(getPadPlaybackKey(targetNote, targetPageX, targetPageY, targetBank));
+
+      const sourceMapping = clonePadMapping(getPadMapping(sourceNote, sourcePageX, sourcePageY, sourceBank));
+      const targetMapping = clonePadMapping(getPadMapping(targetNote, targetPageX, targetPageY, targetBank));
+
+      if (targetMapping) {
+        setPadMapping(sourceNote, targetMapping, sourcePageX, sourcePageY, sourceBank);
+      } else {
+        deletePadMapping(sourceNote, sourcePageX, sourcePageY, sourceBank);
+      }
+
+      if (sourceMapping) {
+        setPadMapping(targetNote, sourceMapping, targetPageX, targetPageY, targetBank);
+      } else {
+        deletePadMapping(targetNote, targetPageX, targetPageY, targetBank);
+      }
+
+      if (state.selectedPad === sourceNote) {
+        state.selectedPad = targetNote;
+      } else if (state.selectedPad === targetNote) {
+        state.selectedPad = sourceNote;
+      }
+
+      persistPadMappings();
+      syncInspectorFromSelectedPad();
+      renderPadGrid();
+      refreshPadLeds();
+      setStatus(
+        elements.storageStatus,
+        `Swapped pad ${sourceNote} on ${formatViewportLabel(sourcePageX, sourcePageY, sourceBank)} with pad ${targetNote} on ${formatViewportLabel(targetPageX, targetPageY, targetBank)}.`
+      );
     }
 
     function normalizeStoredPadMappings(rawMappings) {
@@ -1977,13 +2319,18 @@
         if (!value) {
           continue;
         }
-        if (/^-?\d+,-?\d+:\d+$/.test(key)) {
+        if (/^-?\d+,-?\d+,\d+:\d+$/.test(key)) {
           normalized[key] = value;
+          continue;
+        }
+        if (/^-?\d+,-?\d+:\d+$/.test(key)) {
+          const match = key.match(/^(-?\d+),(-?\d+):(\d+)$/);
+          normalized[`${match[1]},${match[2]},0:${match[3]}`] = value;
           continue;
         }
         const numericKey = Number.parseInt(key, 10);
         if (PAD_NOTES.includes(numericKey)) {
-          normalized[getPadMappingKey(numericKey, 0, 0)] = value;
+          normalized[getPadMappingKey(numericKey, 0, 0, 0)] = value;
         }
       }
       return normalized;
@@ -1993,8 +2340,8 @@
       return getFixedPanicPadKey();
     }
 
-    function formatViewportLabel(pageX = state.padViewport.x, pageY = state.padViewport.y) {
-      return `${pageX}, ${pageY}`;
+    function formatViewportLabel(pageX = state.padViewport.x, pageY = state.padViewport.y, bank = state.padBank) {
+      return `page ${pageX}, ${pageY}${bank ? ` · bank ${bank}` : " · bank 0"}`;
     }
 
     function getFixedPanicPadKey() {
@@ -2002,12 +2349,12 @@
     }
 
     function formatVirtualPadReference(key) {
-      const match = String(key || "").match(/^(-?\d+),(-?\d+):(\d+)$/);
+      const match = String(key || "").match(/^(-?\d+),(-?\d+)(?:,(\d+))?:(\d+)$/);
       if (!match) {
         return String(key || "unknown");
       }
-      const [, pageX, pageY, note] = match;
-      return `pad ${note} on page ${pageX}, ${pageY}`;
+      const [, pageX, pageY, bank = "0", note] = match;
+      return `pad ${note} on page ${pageX}, ${pageY}, bank ${bank}`;
     }
 
     function buildPadGrid() {
@@ -2031,13 +2378,29 @@
         button.addEventListener("click", () => selectPad(note));
         button.addEventListener("pointerdown", async (event) => {
           event.preventDefault();
+          if (event.ctrlKey) {
+            selectPad(note);
+            beginPadDrag(note, event.pointerId);
+            button.setPointerCapture(event.pointerId);
+            return;
+          }
           await ensureAudioReady();
           selectPad(note);
-          state.pointerPresses.set(event.pointerId, note);
+          const location = getPadLocation(note);
+          state.pointerPresses.set(event.pointerId, location);
           button.setPointerCapture(event.pointerId);
-          await triggerPadPress(note, "ui");
+          await triggerPadPress(location, "ui");
+        });
+        button.addEventListener("pointermove", (event) => {
+          if (state.padDrag?.pointerId === event.pointerId) {
+            updatePadDragHover(event.clientX, event.clientY);
+          }
         });
         button.addEventListener("pointerup", (event) => {
+          if (state.padDrag?.pointerId === event.pointerId) {
+            finishPadDrag(event.clientX, event.clientY);
+            return;
+          }
           const pressedNote = state.pointerPresses.get(event.pointerId);
           if (pressedNote != null) {
             triggerPadRelease(pressedNote, "ui");
@@ -2045,33 +2408,54 @@
           }
         });
         button.addEventListener("pointercancel", (event) => {
+          if (state.padDrag?.pointerId === event.pointerId) {
+            cancelPadDrag();
+            return;
+          }
           const pressedNote = state.pointerPresses.get(event.pointerId);
           if (pressedNote != null) {
             triggerPadRelease(pressedNote, "ui");
             state.pointerPresses.delete(event.pointerId);
           }
         });
+        button.addEventListener("wheel", (event) => {
+          if (!event.shiftKey) {
+            return;
+          }
+          event.preventDefault();
+          cyclePadColor(note, event.deltaY < 0 ? 1 : -1);
+        }, { passive: false });
 
         elements.padGrid.appendChild(button);
       }
     }
 
     function renderPadGrid() {
+      renderBankButtons();
       for (const note of PAD_NOTES) {
         const pad = getPadById(note);
         const button = elements.padGrid.querySelector(`[data-note="${note}"]`);
         const mapping = getPadMapping(note);
-        const activePlayback = state.audioByPad.get(note);
+        const activePlayback = getActivePlaybackEntry(note);
         const badge = button.querySelector(".pad-label strong");
         const label = button.querySelector(".pad-label span");
         const color = mapping?.color || "#203245";
-        const active = state.activePads.has(note);
+        const active = isPadActive(note);
         const playing = Boolean(activePlayback) && mapping?.mode === "play";
         const progress = getPadPlaybackProgress(activePlayback);
+        const draggingSource = state.padDrag?.sourceNote === note;
+        const draggingTarget = state.padDrag?.hoverNote === note && state.padDrag?.sourceNote !== note;
+        const displayColor = (active || playing) ? "#14d948" : color;
+        const labelColors = getPadLabelColors(displayColor);
         button.classList.toggle("selected", state.selectedPad === note);
         button.classList.toggle("unmapped", !mapping?.sampleId);
         button.classList.toggle("active", active);
-        button.style.setProperty("--pad-color", (active || playing) ? "#14d948" : color);
+        button.classList.toggle("drag-source", draggingSource);
+        button.classList.toggle("drag-target", draggingTarget);
+        button.style.setProperty("--pad-color", displayColor);
+        button.style.setProperty("--pad-label-color", labelColors.primary);
+        button.style.setProperty("--pad-label-muted", labelColors.secondary);
+        button.style.setProperty("--pad-label-shadow", labelColors.shadow);
         button.style.setProperty("--pad-progress", String(progress));
         button.title = mapping?.sampleId
           ? `${describePad(note)} ${modeLabel(mapping.mode)}. ${sampleNameSuffix(mapping.sampleId).replace(/^ · /, "")}`
@@ -2123,12 +2507,13 @@
       }
 
       for (const sample of pageSamples) {
+        ensureSampleDuration(sample);
         const item = document.createElement("div");
         item.className = "sample-item";
         item.innerHTML = `
           <div class="sample-meta">
             <strong title="${escapeHtml(sample.name)}">${escapeHtml(sample.name)}</strong>
-            <span>${formatBytes(sample.size)}</span>
+            <span>${formatSampleMeta(sample)}</span>
             <div class="sample-level">
               <span>Volume</span>
               <input type="range" min="0" max="200" step="1" value="${clampSampleVolumePercent(sample.volumePercent ?? 100)}" aria-label="Volume for ${escapeHtml(sample.name)}">
@@ -2229,11 +2614,93 @@
       renderPadGrid();
     }
 
+    function beginPadDrag(note, pointerId) {
+      state.padDrag = {
+        sourceNote: note,
+        sourcePageX: state.padViewport.x,
+        sourcePageY: state.padViewport.y,
+        sourceBank: state.padBank,
+        hoverNote: note,
+        hoverPageX: state.padViewport.x,
+        hoverPageY: state.padViewport.y,
+        hoverBank: state.padBank,
+        pointerId,
+      };
+      renderPadGrid();
+      setStatus(elements.storageStatus, `Ctrl-dragging pad ${note}. Drop on another pad to swap their positions on ${formatViewportLabel()}.`);
+    }
+
+    function updatePadDragHover(clientX, clientY) {
+      if (!state.padDrag) {
+        return;
+      }
+      const hit = document.elementFromPoint(clientX, clientY);
+      const bankButton = hit?.closest?.("[data-bank-button]");
+      if (bankButton) {
+        const bank = Number.parseInt(bankButton.dataset.bankButton || "", 10);
+        if (Number.isFinite(bank) && state.padBank !== bank) {
+          state.padBank = bank;
+          state.padDrag.hoverBank = bank;
+          state.padDrag.hoverPageX = state.padViewport.x;
+          state.padDrag.hoverPageY = state.padViewport.y;
+          syncInspectorFromSelectedPad();
+          renderPadGrid();
+          renderBankButtons();
+          refreshPadLeds();
+          setStatus(elements.storageStatus, `Dragging from ${formatViewportLabel(state.padDrag.sourcePageX, state.padDrag.sourcePageY, state.padDrag.sourceBank)} to ${formatViewportLabel()}. Drop on a pad to swap there.`);
+        }
+        return;
+      }
+      const hoveredButton = hit?.closest?.(".pad");
+      const hoveredNote = hoveredButton ? Number.parseInt(hoveredButton.dataset.note || "", 10) : state.padDrag.sourceNote;
+      if (Number.isFinite(hoveredNote) && (
+        hoveredNote !== state.padDrag.hoverNote
+        || state.padDrag.hoverBank !== state.padBank
+        || state.padDrag.hoverPageX !== state.padViewport.x
+        || state.padDrag.hoverPageY !== state.padViewport.y
+      )) {
+        state.padDrag.hoverNote = hoveredNote;
+        state.padDrag.hoverBank = state.padBank;
+        state.padDrag.hoverPageX = state.padViewport.x;
+        state.padDrag.hoverPageY = state.padViewport.y;
+        renderPadGrid();
+      }
+    }
+
+    function finishPadDrag(clientX, clientY) {
+      if (!state.padDrag) {
+        return;
+      }
+      updatePadDragHover(clientX, clientY);
+      const { sourceNote, sourcePageX, sourcePageY, sourceBank, hoverNote, hoverPageX, hoverPageY, hoverBank } = state.padDrag;
+      state.padDrag = null;
+      if (!Number.isFinite(hoverNote) || (
+        hoverNote === sourceNote
+        && hoverPageX === sourcePageX
+        && hoverPageY === sourcePageY
+        && hoverBank === sourceBank
+      )) {
+        renderPadGrid();
+        setStatus(elements.storageStatus, "Pad rearrange cancelled.");
+        return;
+      }
+      swapPadMappings(sourceNote, hoverNote, sourcePageX, sourcePageY, sourceBank, hoverPageX, hoverPageY, hoverBank);
+    }
+
+    function cancelPadDrag() {
+      if (!state.padDrag) {
+        return;
+      }
+      state.padDrag = null;
+      renderPadGrid();
+      setStatus(elements.storageStatus, "Pad rearrange cancelled.");
+    }
+
     function syncInspectorFromSelectedPad() {
       const note = state.selectedPad;
       const mapping = getPadMapping(note);
       const sample = state.samples.find((entry) => entry.id === mapping?.sampleId);
-      elements.selectedPadTitle.textContent = `Pad ${note} selected · page ${formatViewportLabel()}`;
+      elements.selectedPadTitle.textContent = `Pad ${note} selected · ${formatViewportLabel()}`;
       elements.selectedPadInfo.textContent = describePadDetail(note, mapping);
       elements.panicPadHint.textContent = "The far-right utility key CC19 is fixed as Stop / Solo / Mute.";
       elements.sampleSelect.value = mapping?.sampleId || "";
@@ -2323,6 +2790,28 @@
       setStatus(elements.storageStatus, `Cleared mapping for pad ${state.selectedPad}.`);
     }
 
+    function cyclePadColor(note, direction) {
+      const existing = getPadMapping(note);
+      const nextColor = rotateHexHue(existing?.color || DEFAULT_COLOR, direction * 12);
+      const nextMapping = {
+        sampleId: existing?.sampleId || "",
+        mode: existing?.mode || "hold",
+        color: nextColor,
+        offsetMs: clampOffsetMs(existing?.offsetMs ?? 0),
+        loopStartSec: existing?.loopStartSec ?? null,
+        loopEndSec: existing?.loopEndSec ?? null,
+      };
+
+      setPadMapping(note, nextMapping);
+      persistPadMappings();
+      if (state.selectedPad === note) {
+        syncInspectorFromSelectedPad();
+      }
+      renderPadGrid();
+      refreshSinglePadLed(note);
+      setStatus(elements.storageStatus, `Changed pad ${note} colour to ${nextColor} on ${formatViewportLabel()}.`);
+    }
+
     function handleViewportNavigation(control, sourceName) {
       if (control === NAV_BUTTON_CC.up) {
         movePadViewport(0, 1);
@@ -2338,7 +2827,21 @@
 
       setStatus(
         elements.midiInputStatus,
-        `Received from ${sourceName}: navigated to page ${formatViewportLabel()} using top cursor controls.`
+        `Received from ${sourceName}: navigated to ${formatViewportLabel()} using top cursor controls.`
+      );
+      return true;
+    }
+
+    function handleBankToggle(control, sourceName) {
+      const bankIndex = BANK_BUTTON_CCS.indexOf(control);
+      if (bankIndex === -1) {
+        return false;
+      }
+      const bank = bankIndex + 1;
+      togglePadBank(bank, "launchpad");
+      setStatus(
+        elements.midiInputStatus,
+        `Received from ${sourceName}: switched to ${formatViewportLabel()} using right bank button ${bank}.`
       );
       return true;
     }
@@ -2348,21 +2851,52 @@
       state.padViewport.y += deltaY;
       syncInspectorFromSelectedPad();
       renderPadGrid();
+      renderBankButtons();
       refreshPadLeds();
-      setStatus(elements.launchpadStatus, `Viewing page ${formatViewportLabel()} on the Launchpad grid.`);
+      setStatus(elements.launchpadStatus, `Viewing ${formatViewportLabel()} on the Launchpad grid.`);
+    }
+
+    function togglePadBank(bank, sourceName = "ui") {
+      const nextBank = state.padBank === bank ? 0 : bank;
+      state.padBank = nextBank;
+      syncInspectorFromSelectedPad();
+      renderPadGrid();
+      renderBankButtons();
+      refreshPadLeds();
+      setStatus(
+        elements.launchpadStatus,
+        `${sourceName === "launchpad" ? "Launchpad" : "UI"} switched to ${formatViewportLabel()}.`
+      );
+    }
+
+    function getActiveBankSet(pageX = state.padViewport.x, pageY = state.padViewport.y) {
+      const activeBanks = new Set();
+      for (const entry of state.audioByPad.values()) {
+        if (entry.pageX === pageX && entry.pageY === pageY) {
+          activeBanks.add(entry.bank);
+        }
+      }
+      return activeBanks;
+    }
+
+    function renderBankButtons() {
+      const activeBanks = getActiveBankSet();
+      for (const button of elements.bankButtons) {
+        const bank = Number.parseInt(button.dataset.bankButton || "", 10);
+        button.classList.toggle("is-active", bank === state.padBank);
+        button.classList.toggle("is-playing", activeBanks.has(bank));
+      }
     }
 
     async function clearAllData() {
-      const confirmed = window.confirm("Clear all samples and mappings? The far-right utility key CC19 will stay reserved as Stop / Solo / Mute.");
+      const confirmed = window.confirm("Clear all pad mappings on every page? Loaded samples will be kept.");
       if (!confirmed) {
         return;
       }
       stopAllPads();
-      await clearSampleRecords();
-      state.samples = [];
-      state.decodedBuffers = new Map();
       state.padMappings = {};
       state.padViewport = { x: 0, y: 0 };
+      state.padBank = 0;
       state.panicPad = getFixedPanicPadKey();
       localStorage.removeItem(PAD_MAP_STORAGE_KEY);
       localStorage.removeItem(PANIC_PAD_STORAGE_KEY);
@@ -2370,9 +2904,30 @@
       syncInspectorFromSelectedPad();
       renderLibrary();
       renderPadGrid();
+      renderBankButtons();
       refreshPadLeds();
       updateCounts();
-      setStatus(elements.storageStatus, "Cleared all samples and mappings. The far-right utility key CC19 remains reserved as Stop / Solo / Mute.");
+      setStatus(elements.storageStatus, "Cleared all pad mappings. Loaded samples were kept.");
+    }
+
+    async function clearAllSamples() {
+      const confirmed = window.confirm("Delete all loaded samples and remove every pad mapping that uses them?");
+      if (!confirmed) {
+        return;
+      }
+      stopAllPads();
+      stopSamplePreview();
+      await clearSampleRecords();
+      state.samples = [];
+      state.decodedBuffers = new Map();
+      state.padMappings = {};
+      persistPadMappings();
+      syncInspectorFromSelectedPad();
+      renderLibrary();
+      renderPadGrid();
+      refreshPadLeds();
+      updateCounts();
+      setStatus(elements.storageStatus, "Cleared all samples and removed any mappings that referenced them.");
     }
 
     async function deleteSampleEverywhere(sampleId) {
@@ -2490,6 +3045,10 @@
         if (moved) {
           return;
         }
+        const bankSwitched = handleBankToggle(data1, sourceName);
+        if (bankSwitched) {
+          return;
+        }
       }
 
       if (command === 0xB0 && data1 === USER_BUTTON_CC) {
@@ -2532,14 +3091,18 @@
       }
 
       if (command === 0x90 && data2 > 0) {
+        const pressedLocation = getPadLocation(resolvedPad.id);
+        state.midiPresses.set(resolvedPad.id, pressedLocation);
         ensureAudioReady()
-          .then(() => triggerPadPress(resolvedPad.id, "launchpad"))
+          .then(() => triggerPadPress(pressedLocation, "launchpad"))
           .catch((error) => {
             console.error(error);
             setStatus(elements.audioStatus, `Playback failed: ${error.message}`);
           });
       } else {
-        triggerPadRelease(resolvedPad.id, "launchpad");
+        const pressedLocation = state.midiPresses.get(resolvedPad.id) || getPadLocation(resolvedPad.id);
+        triggerPadRelease(pressedLocation, "launchpad");
+        state.midiPresses.delete(resolvedPad.id);
       }
     }
 
@@ -2549,15 +3112,16 @@
         state.masterGain = state.audioContext.createGain();
         state.masterGain.gain.value = 0.96;
         state.reverbSendGain = state.audioContext.createGain();
-        state.reverbSendGain.gain.value = 0.42;
+        state.reverbSendGain.gain.value = 0.52;
         state.reverbConvolver = state.audioContext.createConvolver();
         state.reverbConvolver.buffer = buildTinyReverbImpulse(state.audioContext);
         state.reverbWetGain = state.audioContext.createGain();
-        state.reverbWetGain.gain.value = 0.42;
+        state.reverbWetGain.gain.value = 0.56;
         state.reverbSendGain.connect(state.reverbConvolver);
         state.reverbConvolver.connect(state.reverbWetGain);
         state.reverbWetGain.connect(state.masterGain);
         state.masterGain.connect(state.audioContext.destination);
+        applyReleaseReverbSetting();
         setupRecordingTap();
       }
       if (state.audioContext.state !== "running") {
@@ -2567,7 +3131,7 @@
       setStatus(elements.audioStatus, "Audio engine ready.");
     }
 
-    async function playSamplePreview(sampleId) {
+    async function playSamplePreview(sampleId, offsetMs = 0) {
       stopSamplePreview();
       const preview = createAudioInstance(sampleId, { loop: false });
       preview.addEventListener("ended", () => {
@@ -2581,7 +3145,7 @@
       state.previewAudio = preview;
       state.previewSampleId = sampleId;
       renderLibrary();
-      await playAudioInstance(preview);
+      await playAudioInstance(preview, offsetMs);
     }
 
     async function toggleSamplePreview(sampleId) {
@@ -2608,9 +3172,11 @@
       state.previewSampleId = null;
     }
 
-    async function triggerPadPress(note, source) {
-      const mapping = getPadMapping(note);
-      state.activePads.add(note);
+    async function triggerPadPress(padRef, source) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
+      state.activePads.add(playbackKey);
       renderPadGrid();
       refreshSinglePadLed(note);
 
@@ -2619,89 +3185,100 @@
       }
 
       if (mapping.mode === "latch") {
-        if (state.audioByPad.has(note)) {
-          stopPadPlayback(note);
-          state.activePads.delete(note);
+        if (state.audioByPad.has(playbackKey)) {
+          stopPadPlayback(location);
+          state.activePads.delete(playbackKey);
           renderPadGrid();
           refreshSinglePadLed(note);
           return;
         }
         maybeStartArmedRecording();
-        await startPadPlayback(note, { loop: true, sustain: true });
+        await startPadPlayback(location, { loop: true, sustain: true });
         return;
       }
 
       if (mapping.mode === "loopcapture") {
-        await handleLoopCapturePress(note);
+        await beginLoopCaptureGesture(location);
         return;
       }
 
       if (mapping.mode === "hold") {
-        if (state.audioByPad.has(note)) {
-          stopPadPlayback(note);
+        if (state.audioByPad.has(playbackKey)) {
+          stopPadPlayback(location);
         }
         maybeStartArmedRecording();
-        await startPadPlayback(note, { loop: true, sustain: true });
+        await startPadPlayback(location, { loop: true, sustain: true });
         return;
       }
 
       if (mapping.mode === "play") {
-        if (state.audioByPad.has(note)) {
-          stopPadPlayback(note);
-          state.activePads.delete(note);
+        if (state.audioByPad.has(playbackKey)) {
+          stopPadPlayback(location);
+          state.activePads.delete(playbackKey);
           renderPadGrid();
           refreshSinglePadLed(note);
           return;
         }
         maybeStartArmedRecording();
-        await startPadPlayback(note, { loop: false, sustain: true });
+        await startPadPlayback(location, { loop: false, sustain: true });
         return;
       }
 
       if (mapping.mode === "oneshot") {
-        if (state.audioByPad.has(note)) {
-          stopPadPlayback(note);
+        if (state.audioByPad.has(playbackKey)) {
+          stopPadPlayback(location);
         }
         maybeStartArmedRecording();
-        await startPadPlayback(note, { loop: false, sustain: false });
+        await startPadPlayback(location, { loop: false, sustain: false });
       }
     }
 
-    function triggerPadRelease(note) {
-      const mapping = getPadMapping(note);
-      if (mapping?.mode === "hold") {
-        stopPadPlayback(note);
-      }
+    function triggerPadRelease(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
       if (mapping?.mode === "loopcapture") {
+        completeLoopCaptureGesture(location);
         return;
       }
-      if (mapping?.mode === "play" && state.audioByPad.has(note)) {
-        state.activePads.delete(note);
+      if (mapping?.mode === "hold") {
+        stopPadPlayback(location);
+      }
+      if (mapping?.mode === "play" && state.audioByPad.has(playbackKey)) {
+        state.activePads.delete(playbackKey);
         renderPadGrid();
         refreshSinglePadLed(note);
         return;
       }
-      if (mapping?.mode === "oneshot" && state.audioByPad.has(note)) {
+      if (mapping?.mode === "oneshot" && state.audioByPad.has(playbackKey)) {
         renderPadGrid();
         refreshSinglePadLed(note);
         return;
       }
       if (mapping?.mode !== "latch" && mapping?.mode !== "play") {
-        state.activePads.delete(note);
+        state.activePads.delete(playbackKey);
       }
       renderPadGrid();
       refreshSinglePadLed(note);
     }
 
-    async function startPadPlayback(note, options) {
-      const mapping = getPadMapping(note);
+    async function startPadPlayback(padRef, options) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank } = location;
+      const playbackKey = location.playbackKey;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
       if (hasSavedLoop(mapping)) {
-        await startSavedLoopPlayback(note, mapping, options);
+        await startSavedLoopPlayback(location, mapping, options);
         return;
       }
       const audio = createAudioInstance(mapping.sampleId, { loop: options.loop });
       const offsetMs = await resolvePlaybackOffsetMs(mapping);
       const entry = {
+        playbackKey,
+        note,
+        pageX,
+        pageY,
+        bank,
         kind: "audio",
         audio,
         mapping,
@@ -2711,35 +3288,35 @@
       };
 
       audio.addEventListener("ended", () => {
-        const current = state.audioByPad.get(note);
+        const current = state.audioByPad.get(playbackKey);
         if (current === entry) {
-          finalizeAudioPadPlayback(note, entry);
+          finalizeAudioPadPlayback(entry);
         }
       });
       audio.addEventListener("error", () => {
-        if (state.audioByPad.get(note) === entry) {
-          finalizeAudioPadPlayback(note, entry);
+        if (state.audioByPad.get(playbackKey) === entry) {
+          finalizeAudioPadPlayback(entry);
         }
       });
 
-      state.audioByPad.set(note, entry);
+      state.audioByPad.set(playbackKey, entry);
       syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
 
       try {
         await playAudioInstance(audio, offsetMs);
-        if (state.audioByPad.get(note) !== entry) {
+        if (state.audioByPad.get(playbackKey) !== entry) {
           cleanupAudioInstance(audio);
           return;
         }
         entry.status = "playing";
       } catch (error) {
-        if (state.audioByPad.get(note) === entry) {
-          state.audioByPad.delete(note);
+        if (state.audioByPad.get(playbackKey) === entry) {
+          state.audioByPad.delete(playbackKey);
           cleanupAudioInstance(audio);
           if (mapping.mode !== "latch" && mapping.mode !== "play") {
-            state.activePads.delete(note);
+            state.activePads.delete(playbackKey);
           }
           syncPlaybackProgressLoop();
           renderPadGrid();
@@ -2753,7 +3330,10 @@
       refreshSinglePadLed(note);
     }
 
-    async function startSavedLoopPlayback(note, mapping, options) {
+    async function startSavedLoopPlayback(padRef, mapping, options) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank } = location;
+      const playbackKey = location.playbackKey;
       const buffer = await getDecodedSampleBuffer(mapping.sampleId);
       const sample = state.samples.find((entry) => entry.id === mapping.sampleId);
       const startSec = Math.max(0, Math.min(buffer.duration, mapping.loopStartSec ?? 0));
@@ -2764,7 +3344,7 @@
       const sendGainNode = state.audioContext.createGain();
       const volumeGain = sampleVolumeGain(sample?.volumePercent ?? 100);
       dryGainNode.gain.value = volumeGain;
-      sendGainNode.gain.value = volumeGain * 0.8;
+      sendGainNode.gain.value = volumeGain * BASE_REVERB_SEND_MULTIPLIER;
       source.buffer = buffer;
       source.connect(dryGainNode);
       source.connect(sendGainNode);
@@ -2774,6 +3354,11 @@
       }
 
       const entry = {
+        playbackKey,
+        note,
+        pageX,
+        pageY,
+        bank,
         kind: "buffer",
         source,
         dryGainNode,
@@ -2792,13 +3377,13 @@
       };
 
       source.onended = () => {
-        const current = state.audioByPad.get(note);
+        const current = state.audioByPad.get(playbackKey);
         if (current !== entry) {
           return;
         }
-        state.audioByPad.delete(note);
+        state.audioByPad.delete(playbackKey);
         if (mapping.mode !== "latch" && mapping.mode !== "play") {
-          state.activePads.delete(note);
+          state.activePads.delete(playbackKey);
         }
         cleanupBufferEntry(entry);
         syncPlaybackProgressLoop();
@@ -2816,31 +3401,122 @@
         source.start(0, startSec, Math.max(0.01, endSec - startSec));
       }
 
-      state.audioByPad.set(note, entry);
+      state.audioByPad.set(playbackKey, entry);
       syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
     }
 
-    async function handleLoopCapturePress(note) {
-      const mapping = getPadMapping(note);
-      const existing = state.audioByPad.get(note);
+    async function beginLoopCaptureGesture(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, playbackKey } = location;
+      const existing = state.audioByPad.get(playbackKey);
+      if (existing?.kind === "buffer") {
+        await handleLoopCapturePress(location);
+        return;
+      }
+
+      cancelLoopCaptureGesture(location);
+      const timerId = setTimeout(() => {
+        const gesture = state.loopCaptureGestures.get(playbackKey);
+        if (!gesture) {
+          return;
+        }
+        gesture.didHold = true;
+        startLoopCaptureHoldArm(location).catch((error) => {
+          console.error(error);
+          setStatus(elements.storageStatus, `Loop Capture failed: ${error.message}`);
+        });
+      }, LOOP_CAPTURE_HOLD_MS);
+
+      state.loopCaptureGestures.set(playbackKey, { timerId, didHold: false });
+    }
+
+    function completeLoopCaptureGesture(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, playbackKey } = location;
+      const gesture = state.loopCaptureGestures.get(playbackKey);
+      if (!gesture) {
+        return;
+      }
+      clearTimeout(gesture.timerId);
+      state.loopCaptureGestures.delete(playbackKey);
+      if (gesture.didHold) {
+        return;
+      }
+      startLoopCaptureFromStart(location).catch((error) => {
+        console.error(error);
+        setStatus(elements.storageStatus, `Loop Capture failed: ${error.message}`);
+      });
+    }
+
+    function cancelLoopCaptureGesture(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const playbackKey = location?.playbackKey || String(padRef);
+      const gesture = state.loopCaptureGestures.get(playbackKey);
+      if (!gesture) {
+        return;
+      }
+      clearTimeout(gesture.timerId);
+      state.loopCaptureGestures.delete(playbackKey);
+    }
+
+    async function startLoopCaptureFromStart(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
+      const existing = state.audioByPad.get(playbackKey);
+      if (existing && existing.kind !== "buffer") {
+        stopPadPlayback(location, { immediate: true });
+      }
+      state.loopTapMemory.delete(playbackKey);
+      maybeStartArmedRecording();
+      const startOffsetSec = await resolveLoopCaptureStartOffsetSec(mapping);
+      await startLoopCapturePlayback(location, {
+        phase: "awaitB",
+        draftLoopStartSec: startOffsetSec,
+        draftLoopEndSec: null,
+      });
+      syncInspectorFromSelectedPad();
+      setStatus(elements.storageStatus, `Loop Capture for pad ${note} started with A at ${formatLoopSeconds(startOffsetSec)}s. Press again to set B.`);
+    }
+
+    async function startLoopCaptureHoldArm(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
+      const existing = state.audioByPad.get(playbackKey);
+      if (existing?.kind === "buffer") {
+        return;
+      }
+      if (existing) {
+        stopPadPlayback(location, { immediate: true });
+      }
+      state.loopTapMemory.delete(playbackKey);
+      maybeStartArmedRecording();
+      await startLoopCapturePlayback(location, {
+        phase: "awaitA",
+        draftLoopStartSec: null,
+        draftLoopEndSec: null,
+      });
+      syncInspectorFromSelectedPad();
+      setStatus(elements.storageStatus, `Loop Capture for pad ${note} armed in free mode. Press again to set A.`);
+    }
+
+    async function handleLoopCapturePress(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
+      const existing = state.audioByPad.get(playbackKey);
       const nowMs = performance.now();
 
       if (!existing) {
-        state.loopTapMemory.delete(note);
-        maybeStartArmedRecording();
-        await startLoopCapturePlayback(note, { phase: "awaitA" });
-        syncInspectorFromSelectedPad();
-        setStatus(elements.storageStatus, `Loop Capture for pad ${note} started. Press again to set A.`);
+        await startLoopCaptureFromStart(location);
         return;
       }
 
       if (existing.kind !== "buffer") {
-        stopPadPlayback(note, { immediate: true });
-        maybeStartArmedRecording();
-        await startLoopCapturePlayback(note, { phase: "awaitA" });
-        setStatus(elements.storageStatus, `Loop Capture for pad ${note} restarted. Press again to set A.`);
+        await startLoopCaptureFromStart(location);
         return;
       }
 
@@ -2858,7 +3534,7 @@
         const startSec = existing.draftLoopStartSec ?? existing.startOffsetSec ?? 0;
         let endSec = getBufferPlaybackSeconds(existing);
         endSec = Math.max(startSec + 0.01, endSec);
-        await startLoopCapturePlayback(note, {
+        await startLoopCapturePlayback(location, {
           phase: "loopingDraft",
           restart: true,
           loopStartSec: startSec,
@@ -2866,13 +3542,13 @@
           draftLoopStartSec: startSec,
           draftLoopEndSec: endSec,
         });
-        state.loopTapMemory.delete(note);
+        state.loopTapMemory.delete(playbackKey);
         setStatus(elements.storageStatus, `Loop B set at ${formatLoopSeconds(endSec)}s for pad ${note}. Double-tap to save the loop.`);
         return;
       }
 
       if (existing.phase === "loopingDraft") {
-        const tap = state.loopTapMemory.get(note);
+        const tap = state.loopTapMemory.get(playbackKey);
         if (tap?.awaitingConfirm && nowMs - tap.lastTapMs <= 360) {
           if (tap.timerId) {
             clearTimeout(tap.timerId);
@@ -2883,41 +3559,55 @@
           persistPadMappings();
           syncInspectorFromSelectedPad();
           existing.phase = "loopingSaved";
-          state.loopTapMemory.set(note, { lastTapMs: nowMs, awaitingConfirm: false });
+          state.loopTapMemory.set(playbackKey, { lastTapMs: nowMs, awaitingConfirm: false });
           renderPadGrid();
           setStatus(elements.storageStatus, `Saved A/B loop for pad ${note} and switched it to Hold mode.`);
           return;
         }
 
         const timerId = setTimeout(() => {
-          const latest = state.audioByPad.get(note);
+          const latest = state.audioByPad.get(playbackKey);
           if (latest?.phase === "loopingDraft") {
-            stopLoopCapturePreview(note);
+            stopLoopCapturePreview(location);
           }
         }, 360);
-        state.loopTapMemory.set(note, { lastTapMs: nowMs, awaitingConfirm: true, timerId });
+        state.loopTapMemory.set(playbackKey, { lastTapMs: nowMs, awaitingConfirm: true, timerId });
         setStatus(elements.storageStatus, `Tap again quickly to save the A/B loop for pad ${note}.`);
         return;
       }
 
-      stopLoopCapturePreview(note);
+      stopLoopCapturePreview(location);
     }
 
-    function stopLoopCapturePreview(note) {
-      const tap = state.loopTapMemory.get(note);
+    function stopLoopCapturePreview(padRef) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, playbackKey } = location;
+      cancelLoopCaptureGesture(location);
+      const tap = state.loopTapMemory.get(playbackKey);
       if (tap?.timerId) {
         clearTimeout(tap.timerId);
       }
-      stopPadPlayback(note);
-      state.activePads.delete(note);
-      state.loopTapMemory.delete(note);
+      stopPadPlayback(location);
+      state.activePads.delete(playbackKey);
+      state.loopTapMemory.delete(playbackKey);
       renderPadGrid();
       refreshSinglePadLed(note);
       setStatus(elements.storageStatus, `Loop Capture stopped for pad ${note}.`);
     }
 
-    async function startLoopCapturePlayback(note, options = {}) {
-      const mapping = getPadMapping(note);
+    async function resolveLoopCaptureStartOffsetSec(mapping) {
+      const sampleId = mapping?.sampleId;
+      if (!sampleId) {
+        return 0;
+      }
+      const buffer = await getDecodedSampleBuffer(sampleId);
+      return offsetMsToSeconds(getMappingOffsetMs(mapping, buffer.duration), buffer.duration);
+    }
+
+    async function startLoopCapturePlayback(padRef, options = {}) {
+      const location = getPlaybackLocation(padRef, getPadLocation(Number(padRef)));
+      const { note, pageX, pageY, bank, playbackKey } = location;
+      const mapping = getPadMapping(note, pageX, pageY, bank);
       const buffer = await getDecodedSampleBuffer(mapping.sampleId);
       const sample = state.samples.find((entry) => entry.id === mapping.sampleId);
       const startOffsetSec = offsetMsToSeconds(getMappingOffsetMs(mapping, buffer.duration), buffer.duration);
@@ -2928,7 +3618,7 @@
       const draftLoopEndSec = options.draftLoopEndSec ?? null;
 
       if (options.restart) {
-        stopPadPlayback(note, { immediate: true });
+        stopPadPlayback(location, { immediate: true });
       }
 
       const source = state.audioContext.createBufferSource();
@@ -2947,6 +3637,11 @@
       }
 
       const entry = {
+        playbackKey,
+        note,
+        pageX,
+        pageY,
+        bank,
         kind: "buffer",
         source,
         dryGainNode,
@@ -2964,12 +3659,12 @@
       };
 
       source.onended = () => {
-        const current = state.audioByPad.get(note);
+        const current = state.audioByPad.get(playbackKey);
         if (current !== entry) {
           return;
         }
-        state.audioByPad.delete(note);
-        state.activePads.delete(note);
+        state.audioByPad.delete(playbackKey);
+        state.activePads.delete(playbackKey);
         cleanupBufferEntry(entry);
         syncPlaybackProgressLoop();
         renderPadGrid();
@@ -2992,20 +3687,22 @@
         source.start(0, startOffsetSec);
       }
 
-      state.audioByPad.set(note, entry);
+      state.audioByPad.set(playbackKey, entry);
       syncPlaybackProgressLoop();
       renderPadGrid();
       refreshSinglePadLed(note);
     }
 
-    function stopPadPlayback(note, options = {}) {
-      const current = state.audioByPad.get(note);
+    function stopPadPlayback(padRef, options = {}) {
+      const location = getPlaybackLocation(padRef);
+      const playbackKey = location?.playbackKey || String(padRef);
+      const current = state.audioByPad.get(playbackKey);
       if (!current) {
         return;
       }
 
       if (current.kind === "buffer") {
-        stopBufferPlayback(note, current, options);
+        stopBufferPlayback(playbackKey, current, options);
         return;
       }
 
@@ -3017,7 +3714,7 @@
           // Ignore immediate stop errors.
         }
         cleanupAudioInstance(current.audio);
-        state.audioByPad.delete(note);
+        state.audioByPad.delete(playbackKey);
         syncPlaybackProgressLoop();
         return;
       }
@@ -3045,6 +3742,11 @@
             const sendGain = current.audio._sendGainNode.gain;
             sendGain.cancelScheduledValues(now);
             sendGain.setValueAtTime(Math.max(0.0001, sendGain.value || 1), now);
+            const boostedSend = Math.max(
+              Math.max(0.0001, sendGain.value || 0.0001),
+              Math.min(2.2, (current.audio._dryGainNode?.gain.value || 1) * getStopReverbSendMultiplier())
+            );
+            sendGain.linearRampToValueAtTime(boostedSend, now + 0.02);
             sendGain.exponentialRampToValueAtTime(0.0001, now + RELEASE_REVERB_TAIL_SECONDS);
           }
           setTimeout(finishStop, Math.max(40, RELEASE_REVERB_TAIL_SECONDS * 1000 + 20));
@@ -3054,11 +3756,11 @@
       } else {
         finishStop();
       }
-      state.audioByPad.delete(note);
+      state.audioByPad.delete(playbackKey);
       syncPlaybackProgressLoop();
     }
 
-    function stopBufferPlayback(note, entry, options = {}) {
+    function stopBufferPlayback(playbackKey, entry, options = {}) {
       if (options.immediate) {
         try {
           entry.source.onended = null;
@@ -3067,7 +3769,7 @@
           // Ignore repeated stops.
         }
         cleanupBufferEntry(entry);
-        state.audioByPad.delete(note);
+        state.audioByPad.delete(playbackKey);
         syncPlaybackProgressLoop();
         return;
       }
@@ -3094,6 +3796,11 @@
             const sendGain = entry.sendGainNode.gain;
             sendGain.cancelScheduledValues(now);
             sendGain.setValueAtTime(Math.max(0.0001, sendGain.value || 1), now);
+            const boostedSend = Math.max(
+              Math.max(0.0001, sendGain.value || 0.0001),
+              Math.min(2.2, (entry.dryGainNode?.gain.value || 1) * getStopReverbSendMultiplier())
+            );
+            sendGain.linearRampToValueAtTime(boostedSend, now + 0.02);
             sendGain.exponentialRampToValueAtTime(0.0001, now + RELEASE_REVERB_TAIL_SECONDS);
           }
           setTimeout(finishStop, Math.max(40, RELEASE_REVERB_TAIL_SECONDS * 1000 + 20));
@@ -3103,7 +3810,7 @@
       } else {
         finishStop();
       }
-      state.audioByPad.delete(note);
+      state.audioByPad.delete(playbackKey);
       syncPlaybackProgressLoop();
     }
 
@@ -3143,7 +3850,7 @@
         const sendGainNode = state.audioContext.createGain();
         const volumeGain = sampleVolumeGain(sample.volumePercent ?? 100);
         dryGainNode.gain.value = volumeGain;
-        sendGainNode.gain.value = volumeGain * 0.8;
+        sendGainNode.gain.value = volumeGain * BASE_REVERB_SEND_MULTIPLIER;
         source.connect(dryGainNode);
         source.connect(sendGainNode);
         dryGainNode.connect(state.masterGain);
@@ -3310,8 +4017,8 @@
     }
 
     function buildTinyReverbImpulse(audioContext) {
-      const durationSec = 0.42;
-      const decay = 8;
+      const durationSec = 0.58;
+      const decay = 6;
       const sampleRate = audioContext.sampleRate;
       const length = Math.max(1, Math.floor(sampleRate * durationSec));
       const impulse = audioContext.createBuffer(2, length, sampleRate);
@@ -3321,7 +4028,7 @@
         for (let index = 0; index < length; index += 1) {
           const t = index / length;
           const envelope = Math.pow(1 - t, decay);
-          data[index] = (Math.random() * 2 - 1) * envelope * 0.42;
+          data[index] = (Math.random() * 2 - 1) * envelope * 0.34;
         }
       }
 
@@ -3399,9 +4106,37 @@
         message.push(0x03, note, r, g, b);
       }
 
+      for (let index = 0; index < BANK_BUTTON_CCS.length; index += 1) {
+        const cc = BANK_BUTTON_CCS[index];
+        const bank = index + 1;
+        message.push(0x03, cc, ...getBankButtonLedColor(bank));
+      }
+
+      message.push(0x03, FIXED_PANIC_CC, 90, 12, 12);
       message.push(0x03, USER_BUTTON_CC, ...USER_BUTTON_COLOR);
 
       message.push(0xF7);
+      state.midiOutput.send(message);
+    }
+
+    function getBankButtonLedColor(bank) {
+      if (bank === state.padBank) {
+        return [0, 110, 38];
+      }
+      return getActiveBankSet().has(bank) ? [100, 52, 0] : [0, 0, 0];
+    }
+
+    function refreshBankButtonLeds() {
+      if (!state.midiOutput) {
+        return;
+      }
+      const message = [...SYSEX_PREFIX];
+      for (let index = 0; index < BANK_BUTTON_CCS.length; index += 1) {
+        const cc = BANK_BUTTON_CCS[index];
+        const bank = index + 1;
+        message.push(0x03, cc, ...getBankButtonLedColor(bank));
+      }
+      message.push(0x03, FIXED_PANIC_CC, 90, 12, 12, 0xF7);
       state.midiOutput.send(message);
     }
 
@@ -3419,6 +4154,13 @@
         message.push(0x03, note, r, g, b);
       }
 
+      for (let index = 0; index < BANK_BUTTON_CCS.length; index += 1) {
+        const cc = BANK_BUTTON_CCS[index];
+        const bank = index + 1;
+        message.push(0x03, cc, ...getBankButtonLedColor(bank));
+      }
+
+      message.push(0x03, FIXED_PANIC_CC, 90, 12, 12);
       message.push(0x03, USER_BUTTON_CC, ...USER_BUTTON_COLOR);
       message.push(0xF7);
       state.midiOutput.send(message);
@@ -3439,18 +4181,19 @@
       const [r, g, b] = ledColorForPad(note);
       const message = [...SYSEX_PREFIX, 0x03, note, r, g, b, 0xF7];
       state.midiOutput.send(message);
+      refreshBankButtonLeds();
     }
 
     function ledColorForPad(note) {
       const mapping = getPadMapping(note);
-      const active = state.activePads.has(note);
+      const active = isPadActive(note);
       if (active) {
-        const playback = state.audioByPad.get(note);
+        const playback = getActivePlaybackEntry(note);
         const progress = getPadPlaybackProgress(playback);
         const scale = 1 - (progress * 0.75);
         return ACTIVE_PAD_COLOR.map((value) => Math.max(1, Math.round(value * scale)));
       }
-      const playback = state.audioByPad.get(note);
+      const playback = getActivePlaybackEntry(note);
       if (playback && mapping?.mode === "play") {
         const progress = getPadPlaybackProgress(playback);
         const scale = 1 - (progress * 0.75);
@@ -3461,18 +4204,18 @@
       return [rgbToMidi(rgb.r), rgbToMidi(rgb.g), rgbToMidi(rgb.b)];
     }
 
-    function finalizeAudioPadPlayback(note, entry) {
-      if (state.audioByPad.get(note) !== entry) {
+    function finalizeAudioPadPlayback(entry) {
+      if (state.audioByPad.get(entry.playbackKey) !== entry) {
         return;
       }
-      state.audioByPad.delete(note);
+      state.audioByPad.delete(entry.playbackKey);
       cleanupAudioInstance(entry.audio);
       if (entry.mapping.mode !== "latch" && entry.mapping.mode !== "play") {
-        state.activePads.delete(note);
+        state.activePads.delete(entry.playbackKey);
       }
       syncPlaybackProgressLoop();
       renderPadGrid();
-      refreshSinglePadLed(note);
+      refreshSinglePadLed(entry.note);
     }
 
     function getPadPlaybackProgress(entry) {
@@ -3546,25 +4289,29 @@
       let shouldRender = false;
       const touchedNotes = [];
 
-      for (const [note, entry] of state.audioByPad.entries()) {
+      for (const [playbackKey, entry] of state.audioByPad.entries()) {
+        const note = entry.note;
         if (entry.kind === "audio" && entry.status !== "starting") {
           if (entry.audio.ended || (!entry.audio.loop && entry.audio.paused && entry.audio.currentTime > 0.01)) {
-            finalizeAudioPadPlayback(note, entry);
+            finalizeAudioPadPlayback(entry);
             continue;
           }
         }
         const nextValue = Math.round(getPadPlaybackProgress(entry) * 20) / 20;
-        if (state.padProgressCache.get(note) !== nextValue) {
-          state.padProgressCache.set(note, nextValue);
+        if (state.padProgressCache.get(playbackKey) !== nextValue) {
+          state.padProgressCache.set(playbackKey, nextValue);
           touchedNotes.push(note);
           shouldRender = true;
         }
       }
 
-      for (const note of Array.from(state.padProgressCache.keys())) {
-        if (!state.audioByPad.has(note)) {
-          state.padProgressCache.delete(note);
-          touchedNotes.push(note);
+      for (const playbackKey of Array.from(state.padProgressCache.keys())) {
+        if (!state.audioByPad.has(playbackKey)) {
+          state.padProgressCache.delete(playbackKey);
+          const location = parsePadPlaybackKey(playbackKey);
+          if (location) {
+            touchedNotes.push(location.note);
+          }
           shouldRender = true;
         }
       }
@@ -4008,8 +4755,20 @@
       return Math.max(200, Math.min(2400, parsed));
     }
 
+    function clampReleaseReverbPercent(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) {
+        return 60;
+      }
+      return Math.max(0, Math.min(100, parsed));
+    }
+
     function sampleVolumeGain(value) {
       return clampSampleVolumePercent(value) / 100;
+    }
+
+    function getStopReverbSendMultiplier() {
+      return STOP_REVERB_SEND_MULTIPLIER * (state.releaseReverbPercent / 100);
     }
 
     function updateOffsetHint() {
@@ -4103,6 +4862,95 @@
       );
     }
 
+    function getPadLabelColors(hex) {
+      const { r, g, b } = hexToRgb(hex);
+      const luminance = (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+      if (luminance >= 150) {
+        return {
+          primary: "rgba(8, 14, 20, 0.9)",
+          secondary: "rgba(16, 24, 32, 0.76)",
+          shadow: "0 1px 0 rgba(255,255,255,0.16)",
+        };
+      }
+      return {
+        primary: "rgba(255,255,255,0.94)",
+        secondary: "rgba(240,245,250,0.82)",
+        shadow: "0 1px 0 rgba(0,0,0,0.34)",
+      };
+    }
+
+    function rotateHexHue(hex, degrees) {
+      const { r, g, b } = hexToRgb(hex);
+      const { h, s, l } = rgbToHsl(r, g, b);
+      const nextHue = ((h + degrees) % 360 + 360) % 360;
+      const rotated = hslToRgb(nextHue, Math.max(0.28, s), Math.max(0.22, l));
+      return rgbToHex(rotated.r, rotated.g, rotated.b);
+    }
+
+    function rgbToHsl(r, g, b) {
+      const rn = r / 255;
+      const gn = g / 255;
+      const bn = b / 255;
+      const max = Math.max(rn, gn, bn);
+      const min = Math.min(rn, gn, bn);
+      const delta = max - min;
+      let h = 0;
+      const l = (max + min) / 2;
+      const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+      if (delta !== 0) {
+        if (max === rn) {
+          h = 60 * (((gn - bn) / delta) % 6);
+        } else if (max === gn) {
+          h = 60 * (((bn - rn) / delta) + 2);
+        } else {
+          h = 60 * (((rn - gn) / delta) + 4);
+        }
+      }
+
+      return {
+        h: (h + 360) % 360,
+        s,
+        l,
+      };
+    }
+
+    function hslToRgb(h, s, l) {
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const hp = h / 60;
+      const x = c * (1 - Math.abs((hp % 2) - 1));
+      let r1 = 0;
+      let g1 = 0;
+      let b1 = 0;
+
+      if (hp >= 0 && hp < 1) {
+        r1 = c;
+        g1 = x;
+      } else if (hp < 2) {
+        r1 = x;
+        g1 = c;
+      } else if (hp < 3) {
+        g1 = c;
+        b1 = x;
+      } else if (hp < 4) {
+        g1 = x;
+        b1 = c;
+      } else if (hp < 5) {
+        r1 = x;
+        b1 = c;
+      } else {
+        r1 = c;
+        b1 = x;
+      }
+
+      const m = l - c / 2;
+      return {
+        r: Math.round((r1 + m) * 255),
+        g: Math.round((g1 + m) * 255),
+        b: Math.round((b1 + m) * 255),
+      };
+    }
+
     function hexToRgb(hex) {
       const normalized = hex.replace("#", "");
       const value = normalized.length === 3
@@ -4137,6 +4985,31 @@
         return `${(bytes / 1024).toFixed(1)} KB`;
       }
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function formatSampleMeta(sample) {
+      const size = formatBytes(sample.size || 0);
+      if (!sample?.durationSec) {
+        return `${size} · --:--`;
+      }
+      return `${size} · ${formatDuration(sample.durationSec)}`;
+    }
+
+    function ensureSampleDuration(sample) {
+      if (!sample || sample.durationSec || sample._durationPending) {
+        return;
+      }
+      sample._durationPending = true;
+      primeSampleDuration(sample.id)
+        .then(() => {
+          renderLibrary();
+        })
+        .catch(() => {
+          // Ignore metadata failures for duration hints.
+        })
+        .finally(() => {
+          sample._durationPending = false;
+        });
     }
 
     function truncate(text, length) {
